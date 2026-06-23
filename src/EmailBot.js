@@ -24,6 +24,7 @@ const { MessageFlags } = require('discord.js');
 const { createSessionExpiredEmbed, createInvalidCodeEmbed, createInvalidEmailEmbed, createVerificationSuccessEmbed, createCodeSentEmbed } = require('./utils/embeds');
 const ErrorNotifier = require('./utils/ErrorNotifier');
 const { emailMatchesDomains, emailIsBlacklisted, getMatchingDomainPatterns } = require('./utils/wildcardMatch');
+const { start: startTelegram } = require('./telegram/TelegramListener');
 
 const bot = new Discord.Client({
     intents: [
@@ -66,8 +67,10 @@ const commands = []
 
 for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
-    bot.commands.set(command.data.name, command);
-    commands.push(command.data.toJSON())
+    const cmdData = command.data ?? command.definition;
+    if (!cmdData) { console.warn(`Skipping ${file}: no data or definition`); continue; }
+    bot.commands.set(cmdData.name, command);
+    commands.push(typeof cmdData.toJSON === 'function' ? cmdData.toJSON() : cmdData)
 }
 
 const MAX_RETRIES = 3;
@@ -154,6 +157,7 @@ bot.once('clientReady', async () => {
         serverStatsAPI.app.listen(serverStatsAPI.port, () => {
             console.log(`App listening on port ${serverStatsAPI.port}!`)
         })
+	startTelegram(bot);
         rl = readline.createInterface(stdin, stdout)
         rl.on("line", async command => {
             switch (command) {
