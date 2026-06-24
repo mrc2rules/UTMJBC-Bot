@@ -26,12 +26,26 @@ module.exports = {
             );
         }
 
-        const rows = channels.map((ch, i) => {
+        const state = require('../shared/state');
+        const rows = await Promise.all(channels.map(async (ch, i) => {
             const addedAt = new Date(ch.added_at).toLocaleDateString('en-MY', {
                 day: 'numeric', month: 'short', year: 'numeric'
             });
-            return `**${i + 1}.** \`${ch.channel_id}\`\n└ Added by ${ch.added_by} on ${addedAt}`;
-        });
+            
+            let title = 'Unknown Channel';
+            if (state.telegramClient) {
+                try {
+                    // channel_id is numeric so pass it as BigInt just in case
+                    const targetId = /^-?\d+$/.test(ch.channel_id) ? BigInt(ch.channel_id) : ch.channel_id;
+                    const entity = await state.telegramClient.getEntity(targetId);
+                    title = entity.title || entity.username || 'Unknown Channel';
+                } catch (err) {
+                    title = 'Unknown Channel';
+                }
+            }
+            
+            return `**${i + 1}.** ${title} (\`${ch.channel_id}\`)\n└ Added by ${ch.added_by} on ${addedAt}`;
+        }));
 
         const embed = new EmbedBuilder()
             .setTitle(`📡 Tracked Telegram Channels (${channels.length})`)

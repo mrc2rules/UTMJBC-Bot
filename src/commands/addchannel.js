@@ -38,7 +38,9 @@ module.exports = {
         // Resolve and validate the channel via Telegram — rejects bad usernames/IDs early
         let entity;
         try {
-            entity = await state.telegramClient.getEntity(input);
+            // gramjs requires numeric IDs to be BigInt, otherwise string usernames
+            const targetInput = /^-?\d+$/.test(input) ? BigInt(input) : input;
+            entity = await state.telegramClient.getEntity(targetInput);
         } catch {
             return interaction.editReply(
                 `❌ Could not find a Telegram channel for \`${input}\`.\n` +
