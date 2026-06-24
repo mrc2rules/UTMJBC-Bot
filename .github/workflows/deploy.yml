@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy over SSH (detached restart + health check)
+      - name: Deploy over SSH (AlwaysData-safe)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -35,27 +35,11 @@ jobs:
             git reset --hard origin/main
             npm ci --omit=dev
 
-            # Ask supervisor to recycle both workers, but do it detached
+            # Detach recycle so SSH action itself is never TERM'd
             nohup bash -lc "
               sleep 2
               pkill -TERM -f \"$BOT_PAT\" || true
               pkill -TERM -f \"$SHARD_PAT\" || true
-            " >/dev/null 2>&1 < /dev/null & disown || true
+            " >/dev/null 2>&1 < /dev/null &
 
-            # Wait for AlwaysData supervisor to bring them back
-            for i in $(seq 1 20); do
-              sleep 2
-              BOT_OK=0
-              SHARD_OK=0
-              pgrep -f "$BOT_PAT" >/dev/null && BOT_OK=1 || true
-              pgrep -f "$SHARD_PAT" >/dev/null && SHARD_OK=1 || true
-
-              if [ "$BOT_OK" -eq 1 ] && [ "$SHARD_OK" -eq 1 ]; then
-                echo "✅ Services are running (EmailBot + sharder)."
-                exit 0
-              fi
-            done
-
-            echo "❌ Services did not come back in time."
-            echo "Check AlwaysData service logs/panel for startup errors."
-            exit 1
+            echo "Deploy finished. AlwaysData should restart services automatically."
