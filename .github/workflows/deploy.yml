@@ -1,9 +1,9 @@
-name: Auto Deploy Bot to Alwaysdata
+name: Auto Deploy to server
 
 on:
   push:
     branches:
-      - main  # Fires the automation every time you push to your main branch
+      - main
 
 jobs:
   deploy:
@@ -20,15 +20,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
-            # 1. Navigate to your bot's cloned repository folder on Alwaysdata
-            cd ~/www/UTMJBC-Bot
-            
-            # 2. Reset any accidental manual changes on the server to match GitHub perfectly
+            cd ~/EmailVerify
             git fetch origin main
             git reset --hard origin/main
-            
-            # 3. Safely install any new npm dependencies added since last push
             npm install --production
-            
-            # 4. Terminate the active running process to trigger Alwaysdata's Service auto-restart
             pkill -f "EmailBot.js" || true
