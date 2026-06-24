@@ -5,23 +5,42 @@ on:
     branches:
       - main
 
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v4
 
-      - name: Run deployment script over SSH (Using Password)
+      - name: Deploy over SSH (AlwaysData services)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
+          script_stop: true
+          command_timeout: 30m
           script: |
-            cd ~/EmailVerify
+            set -euo pipefail
+
+            APP_DIR="/home/jbcemail/EmailVerify"
+            BOT_CMD="node /home/jbcemail/EmailVerify/src/EmailBot.js"
+            SHARDER_CMD="node /home/jbcemail/EmailVerify/src/sharder.js"
+
+            cd "$APP_DIR"
             git fetch origin main
             git reset --hard origin/main
-            npm install --production
-            pkill -f "EmailBot.js" || true
+            npm ci --omit=dev
+
+            # Trigger AlwaysData restart by terminating current workers.
+            pkill -TERM -f "$BOT_CMD" || true
+            pkill -TERM -f "$SHARDER_CMD" || true
+            sleep 3
+
+            echo "Deploy complete. If AlwaysData supervision is enabled, services are restarting."
