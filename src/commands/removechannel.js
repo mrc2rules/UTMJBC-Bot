@@ -25,20 +25,25 @@ module.exports = {
 
         await interaction.deferReply({ ephemeral: true });
 
-        const channelId = interaction.options.getString('channel_id').trim();
+        let inputId = interaction.options.getString('channel_id').trim();
 
-        const exists = await channelExists(channelId);
+        // Sanitize legacy positive IDs
+        if (/^\d+$/.test(inputId)) {
+            inputId = '-100' + inputId;
+        }
+
+        const exists = await channelExists(inputId);
         if (!exists) {
             return interaction.editReply(
-                `❌ No channel with ID \`${channelId}\` found in the scrape list.\n` +
+                `❌ No channel with ID \`${inputId}\` found in the scrape list.\n` +
                 `Use **/listchannels** to see what's currently tracked.`
             );
         }
 
-        await removeChannel(channelId);
+        await removeChannel(inputId);
 
         return interaction.editReply(
-            `✅ Channel \`${channelId}\` has been removed from the scrape list.\n` +
+            `✅ Channel \`${inputId}\` has been removed from the scrape list.\n` +
             `It will be excluded from future scrape cycles.`
         );
     },

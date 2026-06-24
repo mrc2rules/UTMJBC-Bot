@@ -72,7 +72,7 @@ module.exports = {
             );
         }
 
-        await addChannel(channelId, interaction.user.tag);
+        await addChannel(channelId, channelTitle, interaction.user.tag);
 
         return interaction.editReply(
             `✅ Added **${channelTitle}** (\`${channelId}\`) to the scrape list.\n` +

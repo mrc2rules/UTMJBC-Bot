@@ -1,11 +1,48 @@
-const { PermissionsBitField } = require('discord.js');
+const { PermissionsBitField, ApplicationCommandOptionType } = require('discord.js');
 const { runScrape } = require('../telegram/TelegramListener');
+const { getChannelDetails } = require('../telegram/ChannelManager');
 const state = require('../shared/state');
 
 module.exports = {
     definition: {
         name: 'scrape',
-        description: 'Manually trigger a Telegram scrape cycle. (Admin only)'
+        description: 'Manually trigger a Telegram scrape cycle. (Admin only)',
+        options: [
+            {
+                name: 'channel',
+                description: 'Optional. Scrape only a specific channel.',
+                type: ApplicationCommandOptionType.String,
+                required: false,
+                autocomplete: true,
+            },
+            {
+                name: 'force',
+                description: 'Optional. Force scrape (bypass seen messages check).',
+                type: ApplicationCommandOptionType.Boolean,
+                required: false,
+            },
+            {
+                name: 'cleardb',
+                description: 'Optional. Clear the seen_messages database before scraping.',
+                type: ApplicationCommandOptionType.Boolean,
+                required: false,
+            }
+        ]
+    },
+
+    async autocomplete(interaction) {
+        const focusedValue = interaction.options.getFocused().toLowerCase();
+        try {
+            const channels = await getChannelDetails();
+            const choices = channels.map(ch => ({
+                name: `${ch.channel_name || 'Unknown'} (${ch.channel_id})`,
+                value: ch.channel_id
+            }));
+            const filtered = choices.filter(choice => choice.name.toLowerCase().includes(focusedValue));
+            await interaction.respond(filtered.slice(0, 25));
+        } catch (e) {
+            await interaction.respond([]);
+        }
     },
 
     async execute(interaction) {
@@ -33,8 +70,12 @@ module.exports = {
         // We defer since scraping might take some time and we don't want the interaction to time out.
         await interaction.deferReply({ ephemeral: true });
 
+        const targetChannelId = interaction.options.getString('channel');
+        const force = interaction.options.getBoolean('force') || false;
+        const cleardb = interaction.options.getBoolean('cleardb') || false;
+
         try {
-            const result = await runScrape(interaction.client);
+            const result = await runScrape(interaction.client, { targetChannelId, force, cleardb });
             
             if (result.skipped) {
                 return interaction.editReply('⚠️ Scrape skipped (already running).');

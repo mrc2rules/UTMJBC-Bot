@@ -18,9 +18,11 @@ db.serialize(() => {
     // ── Telegram channel list (replaces config.telegramChannels array) ───────
     db.run(`CREATE TABLE IF NOT EXISTS telegram_channels (
         channel_id TEXT PRIMARY KEY,
+        channel_name TEXT,
         added_by   TEXT,
         added_at   INTEGER
     )`);
+    db.run(`ALTER TABLE telegram_channels ADD COLUMN channel_name TEXT`, () => {});
 
     // ── Telegram events (stores event info for discord buttons) ─────────────
     db.run(`CREATE TABLE IF NOT EXISTS telegram_events (
@@ -29,6 +31,33 @@ db.serialize(() => {
         benefits         TEXT,
         registration_url TEXT
     )`);
+
+    // ── Migration: Normalize legacy positive numeric IDs to -100 prefixed ───
+    db.all(`SELECT channel_id FROM telegram_channels`, [], (err, rows) => {
+        if (!err && rows) {
+            rows.forEach(row => {
+                if (/^\d+$/.test(row.channel_id)) {
+                    const newId = '-100' + row.channel_id;
+                    db.run(`UPDATE telegram_channels SET channel_id = ? WHERE channel_id = ?`, [newId, row.channel_id]);
+                }
+            });
+        }
+    });
+    db.all(`SELECT message_id, channel FROM seen_messages`, [], (err, rows) => {
+        if (!err && rows) {
+            rows.forEach(row => {
+                if (/^\d+$/.test(row.channel)) {
+                    const newChannel = '-100' + row.channel;
+                    // Fix composite message_id that contains the old channel ID
+                    const newMessageId = row.message_id.startsWith(row.channel + '_') 
+                        ? row.message_id.replace(row.channel + '_', newChannel + '_')
+                        : row.message_id;
+                    db.run(`UPDATE seen_messages SET channel = ?, message_id = ? WHERE channel = ? AND message_id = ?`, 
+                        [newChannel, newMessageId, row.channel, row.message_id]);
+                }
+            });
+        }
+    });
 });
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────

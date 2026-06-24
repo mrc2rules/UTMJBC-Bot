@@ -9,7 +9,7 @@ const config = require('../../config/config.json');
 
 const db = require('../shared/db');
 const state = require('../shared/state');
-const { getChannels } = require('./ChannelManager');
+const { getChannels, getChannelDetails, clearSeenMessages } = require('./ChannelManager');
 
 function logInfo(msg) {
     console.log(msg);
@@ -135,11 +135,11 @@ These are NOT events and must return { "isEvent": false }:
 - Awareness posts, tips, guides, or support service announcements
 - Announcements, reminders, and notices
 
-RULE 2: If the event date can be determined AND it has already passed relative to Today's Date above, return { "isEvent": false, "_pastEvent": true }. Do not post stale events.
+RULE 2: Extract the event end date as "eventEndDate" in ISO format (YYYY-MM-DD). Do NOT evaluate whether the event is past — just extract the date accurately. If you can't determine the date, return null.
 
-RULE 3: The 'title' and 'description' fields must always be in English. If the message is in Malay, translate them.
+RULE 3: The 'title' field must always be in English. If the message is in Malay, translate it.
 Set 'originalLanguage' to "english", "malay", or "other".
-Set 'translatedText' to a full English translation if not English, otherwise null.
+Set 'translatedText' to a full English translation of the ENTIRE message if not English, otherwise null.
 
 RULE 4: Classify as exactly one of: "Club Activity", "Club Recruitment", "Club Announcement", "Competition / Hackathon", "Talk / Seminar / Workshop", "Faculty / Department Event", "University-wide Event", "External / Collaboration Event".
 
@@ -172,13 +172,12 @@ Analyse the message and extract the required fields as per the strict JSON schem
         type: "object",
         properties: {
             isEvent: { type: "boolean" },
-            _pastEvent: { type: "boolean" },
             type: { type: "string" },
             topic: { type: "string" },
             title: { type: "string" },
             date: { type: "string", nullable: true },
+            eventEndDate: { type: "string", nullable: true },
             location: { type: "string", nullable: true },
-            description: { type: "string" },
             originalLanguage: { type: "string" },
             translatedText: { type: "string", nullable: true },
             merit: { type: "boolean" },
@@ -199,9 +198,9 @@ Analyse the message and extract the required fields as per the strict JSON schem
                     systemInstruction: { parts: [{ text: systemInstruction }] },
                     contents: [
                         { role: 'user', parts: [{ text: "Join our UTM web dev workshop! Tomorrow at N24. Free entry and merit given. Register at bit.ly/webdev. Food provided." }] },
-                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: true, _pastEvent: false, type: "Talk / Seminar / Workshop", topic: "Tech/Coding", title: "UTM Web Dev Workshop", date: "Tomorrow", location: "N24", description: "Learn web development at this workshop.", originalLanguage: "english", translatedText: null, merit: true, cost: "Free", registrationUrl: "bit.ly/webdev", benefits: "Food provided" }) }] },
+                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: true, type: "Talk / Seminar / Workshop", topic: "Tech/Coding", title: "UTM Web Dev Workshop", date: "Tomorrow", eventEndDate: "2026-06-25", location: "N24", originalLanguage: "english", translatedText: null, merit: true, cost: "Free", registrationUrl: "bit.ly/webdev", benefits: "Food provided" }) }] },
                         { role: 'user', parts: [{ text: "Just a reminder that our weekly meeting for EXCO members is tonight at 8pm." }] },
-                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: false, _pastEvent: false }) }] },
+                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: false }) }] },
                         { role: 'user', parts: [{ text: prompt }] }
                     ],
                     generationConfig: {
@@ -268,8 +267,24 @@ const META_TAGS = {
     'External': '1519278024506216609'
 };
 
-async function postToDiscord(discordChannel, eventData, channelUsername) {
-    const descriptionText = eventData.translatedText || eventData.description || eventData.originalText || '';
+function isEventPast(eventData) {
+    const rawDate = eventData.eventEndDate || eventData.date;
+    if (!rawDate) return false;
+
+    // Try to isolate the end date if it's a range like "9 May 2026 - 10 May 2026"
+    const dateStr = rawDate.includes(' - ') ? rawDate.split(' - ').pop().trim() : rawDate.trim();
+    
+    const eventDate = new Date(dateStr);
+    if (isNaN(eventDate.getTime())) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return eventDate < today;
+}
+
+async function postToDiscord(discordChannel, eventData, channelUsername, originalText) {
+    const descriptionText = eventData.translatedText || originalText || '';
 
     const truncatedDescription = descriptionText.length > 4096
         ? descriptionText.slice(0, 4090) + '…'
@@ -281,6 +296,7 @@ async function postToDiscord(discordChannel, eventData, channelUsername) {
     const emoji = EVENT_TYPE_EMOJI[eventData.type] || '📅';
 
     const embed = new EmbedBuilder()
+        .setTitle(safeTitle)
         .setDescription(truncatedDescription)
         .setColor(randomEmbedColor())
         .addFields(
@@ -351,7 +367,7 @@ async function postToDiscord(discordChannel, eventData, channelUsername) {
 
 // ─── Scraper ──────────────────────────────────────────────────────────────────
 
-async function scrapeChannel(discordChannel, channelId) {
+async function scrapeChannel(discordChannel, channelId, force = false, channelName = null) {
     try {
         // Fix for old DB entries that stored positive IDs
         let parsedId = channelId;
@@ -373,20 +389,22 @@ async function scrapeChannel(discordChannel, channelId) {
                 continue;
             }
 
-            const seen = await isAlreadySeen(msg.id, channelId);
-            if (seen) {
-                skippedSeen++;
-                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (already seen)`);
-                continue;
-            }
+            if (!force) {
+                const seen = await isAlreadySeen(msg.id, channelId);
+                if (seen) {
+                    skippedSeen++;
+                    logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (already seen)`);
+                    continue;
+                }
 
-            const hash = hashMessageText(msg.message);
-            const hashSeen = await isAlreadySeenByHash(hash);
-            if (hashSeen) {
-                skippedDupe++;
-                markAsSeen(msg.id, channelId, hash);
-                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (duplicate content)`);
-                continue;
+                const hash = hashMessageText(msg.message);
+                const hashSeen = await isAlreadySeenByHash(hash);
+                if (hashSeen) {
+                    skippedDupe++;
+                    markAsSeen(msg.id, channelId, hash);
+                    logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (duplicate content)`);
+                    continue;
+                }
             }
 
             if (sentToGemini > 0) await sleep(4200);
@@ -400,18 +418,23 @@ async function scrapeChannel(discordChannel, channelId) {
                 continue;
             }
 
+            const hash = hashMessageText(msg.message);
             markAsSeen(msg.id, channelId, hash);
 
             if (!result.isEvent) {
-                const reason = result._pastEvent ? 'PAST_EVENT' : 'NOT_EVENT';
-                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says ${reason}`);
-                if (result._pastEvent) skippedPast++;
+                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says NOT_EVENT`);
+                continue;
+            }
+
+            if (isEventPast(result)) {
+                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (isEventPast determined past event)`);
+                skippedPast++;
                 continue;
             }
 
             logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says EVENT (${result.type})`);
             eventsFound++;
-            await postToDiscord(discordChannel, result, channelId);
+            await postToDiscord(discordChannel, result, channelName || channelId, msg.message);
             logInfo(`[TelegramListener] Posted: ${result.title} [${result.type}]`);
         }
 
@@ -429,7 +452,7 @@ async function scrapeChannel(discordChannel, channelId) {
 }
 
 // Exported so Discord /scrape command can invoke it manually
-async function runScrape(discordClient) {
+async function runScrape(discordClient, options = {}) {
     if (state.isScraping) {
         logWarn('[TelegramListener] Scrape already in progress, skipping.');
         return { skipped: true };
@@ -438,11 +461,16 @@ async function runScrape(discordClient) {
     state.isScraping = true;
     logInfo('[TelegramListener] Starting scrape cycle...');
 
+    if (options.cleardb) {
+        logInfo('[TelegramListener] Clearing seen_messages database...');
+        await clearSeenMessages();
+    }
+
     // Resolve Discord event channel once per cycle — cache-first to avoid redundant API calls
-    const targetChannelId = '1519270170873565405';
-    let discordChannel = discordClient.channels.cache.get(targetChannelId);
+    const targetDiscordChannelId = '1519270170873565405';
+    let discordChannel = discordClient.channels.cache.get(targetDiscordChannelId);
     if (!discordChannel) {
-        discordChannel = await discordClient.channels.fetch(targetChannelId).catch(() => null);
+        discordChannel = await discordClient.channels.fetch(targetDiscordChannelId).catch(() => null);
     }
     if (!discordChannel) {
         state.isScraping = false;
@@ -450,11 +478,15 @@ async function runScrape(discordClient) {
         return { error: 'Discord event channel not found.' };
     }
 
-    const channels = await getChannels();
+    let channelsToScrape = await getChannelDetails();
+    if (options.targetChannelId) {
+        channelsToScrape = channelsToScrape.filter(ch => ch.channel_id === options.targetChannelId);
+    }
+
     let totalEvents = 0, totalGemini = 0;
 
-    for (const ch of channels) {
-        const { eventsFound, sentToGemini } = await scrapeChannel(discordChannel, ch);
+    for (const ch of channelsToScrape) {
+        const { eventsFound, sentToGemini } = await scrapeChannel(discordChannel, ch.channel_id, options.force, ch.channel_name);
         totalEvents += eventsFound;
         totalGemini += sentToGemini;
     }
@@ -462,7 +494,7 @@ async function runScrape(discordClient) {
     state.isScraping = false;
     logInfo('[TelegramListener] Scrape cycle complete.');
 
-    return { channelsScraped: channels.length, totalEvents, totalGemini };
+    return { channelsScraped: channelsToScrape.length, totalEvents, totalGemini };
 }
 
 // ─── Entry Point ──────────────────────────────────────────────────────────────
