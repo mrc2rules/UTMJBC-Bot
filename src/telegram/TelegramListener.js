@@ -10,6 +10,7 @@ const config = require('../../config/config.json');
 const db = require('../shared/db');
 const state = require('../shared/state');
 const { getChannels, getChannelDetails, clearSeenMessages } = require('./ChannelManager');
+const { getKeywordBlacklist } = require('./KeywordBlacklistManager');
 
 function logInfo(msg) {
     console.log(msg);
@@ -137,9 +138,7 @@ These are NOT events and must return { "isEvent": false }:
 
 RULE 2: Extract the event end date as "eventEndDate" in ISO format (YYYY-MM-DD). Do NOT evaluate whether the event is past — just extract the date accurately. If you can't determine the date, return null.
 
-RULE 3: The 'title' field must always be in English. If the message is in Malay, translate it.
-Set 'originalLanguage' to "english", "malay", or "other".
-Set 'translatedText' to a full English translation of the ENTIRE message if not English, otherwise null.
+RULE 3: You MUST extract the exact, original message text into 'exactText'. DO NOT summarize or truncate it. If the original message is in Malay or another language, translate the entire message into English and put the full translation into 'exactText' instead. The 'title' field must also always be in English.
 
 RULE 4: Classify as exactly one of: "Club Activity", "Club Recruitment", "Club Announcement", "Competition / Hackathon", "Talk / Seminar / Workshop", "Faculty / Department Event", "University-wide Event", "External / Collaboration Event".
 
@@ -160,6 +159,10 @@ RULE 9: Topic Categorization. Choose ONE primary topic from:
 - Community/Volunteer
 - Academic/Science
 - Other
+
+RULE 10: Extract the event start date as "startDate" in ISO format (YYYY-MM-DD). If you can't determine it, return null.
+RULE 11: Extract the event start time as "startTime" in 24-hour format (HH:MM). If not specified, return null.
+RULE 12: Extract the event end time as "endTime" in 24-hour format (HH:MM). If not specified, return null.
 </rules>
 
 <task>
@@ -176,10 +179,12 @@ Analyse the message and extract the required fields as per the strict JSON schem
             topic: { type: "string" },
             title: { type: "string" },
             date: { type: "string", nullable: true },
+            startDate: { type: "string", nullable: true },
             eventEndDate: { type: "string", nullable: true },
+            startTime: { type: "string", nullable: true },
+            endTime: { type: "string", nullable: true },
             location: { type: "string", nullable: true },
-            originalLanguage: { type: "string" },
-            translatedText: { type: "string", nullable: true },
+            exactText: { type: "string" },
             merit: { type: "boolean" },
             cost: { type: "string" },
             registrationUrl: { type: "string", nullable: true },
@@ -197,8 +202,8 @@ Analyse the message and extract the required fields as per the strict JSON schem
                 body: JSON.stringify({
                     systemInstruction: { parts: [{ text: systemInstruction }] },
                     contents: [
-                        { role: 'user', parts: [{ text: "Join our UTM web dev workshop! Tomorrow at N24. Free entry and merit given. Register at bit.ly/webdev. Food provided." }] },
-                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: true, type: "Talk / Seminar / Workshop", topic: "Tech/Coding", title: "UTM Web Dev Workshop", date: "Tomorrow", eventEndDate: "2026-06-25", location: "N24", originalLanguage: "english", translatedText: null, merit: true, cost: "Free", registrationUrl: "bit.ly/webdev", benefits: "Food provided" }) }] },
+                        { role: 'user', parts: [{ text: "Join our UTM web dev workshop! Tomorrow from 2:30 PM to 5:00 PM at N24. Free entry and merit given. Register at bit.ly/webdev. Food provided." }] },
+                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: true, type: "Talk / Seminar / Workshop", topic: "Tech/Coding", title: "UTM Web Dev Workshop", date: "Tomorrow, 2:30 PM - 5:00 PM", startDate: "2026-06-25", eventEndDate: "2026-06-25", startTime: "14:30", endTime: "17:00", location: "N24", exactText: "Join our UTM web dev workshop! Tomorrow from 2:30 PM to 5:00 PM at N24. Free entry and merit given. Register at bit.ly/webdev. Food provided.", merit: true, cost: "Free", registrationUrl: "bit.ly/webdev", benefits: "Food provided" }) }] },
                         { role: 'user', parts: [{ text: "Just a reminder that our weekly meeting for EXCO members is tonight at 8pm." }] },
                         { role: 'model', parts: [{ text: JSON.stringify({ isEvent: false }) }] },
                         { role: 'user', parts: [{ text: prompt }] }
@@ -283,8 +288,70 @@ function isEventPast(eventData) {
     return eventDate < today;
 }
 
+// Generates a Google Calendar render URL prefilled with event metadata
+function generateGoogleCalendarUrl(eventData) {
+    const baseUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+    
+    const start = eventData.startDate ? eventData.startDate.replace(/-/g, '') : '';
+    let end = eventData.eventEndDate ? eventData.eventEndDate.replace(/-/g, '') : start;
+    
+    let datesParam = '';
+    if (start) {
+        if (eventData.startTime && typeof eventData.startTime === 'string') {
+            const startTimeStr = eventData.startTime.replace(/:/g, '') + '00';
+            
+            let endTimeStr;
+            if (eventData.endTime && typeof eventData.endTime === 'string') {
+                endTimeStr = eventData.endTime.replace(/:/g, '') + '00';
+            } else {
+                const parts = eventData.startTime.split(':');
+                const hour = Number(parts[0]);
+                const nextHour = String((hour + 1) % 24).padStart(2, '0');
+                const min = parts[1] || '00';
+                endTimeStr = `${nextHour}${min}00`;
+            }
+            
+            const startDateTime = `${start}T${startTimeStr}`;
+            const endDateTime = `${end}T${endTimeStr}`;
+            datesParam = `${startDateTime}/${endDateTime}`;
+        } else {
+            // All-day event (end date is exclusive for Google Calendar templates)
+            let exclusiveEnd = start;
+            const endDateSource = eventData.eventEndDate || eventData.startDate;
+            if (endDateSource) {
+                const endDateObj = new Date(endDateSource);
+                endDateObj.setDate(endDateObj.getDate() + 1);
+                if (!isNaN(endDateObj.getTime())) {
+                    const ey = endDateObj.getFullYear();
+                    const em = String(endDateObj.getMonth() + 1).padStart(2, '0');
+                    const ed = String(endDateObj.getDate()).padStart(2, '0');
+                    exclusiveEnd = `${ey}${em}${ed}`;
+                }
+            }
+            datesParam = `${start}/${exclusiveEnd}`;
+        }
+    }
+
+    let url = `${baseUrl}&text=${encodeURIComponent(eventData.title || 'UTM Event')}`;
+    if (datesParam) url += `&dates=${datesParam}`;
+    if (eventData.location) url += `&location=${encodeURIComponent(eventData.location)}`;
+    
+    // Short details description to prevent exceeding Discord's button URL length limit
+    url += `&details=${encodeURIComponent('Sourced from Telegram UTM event scraper. View Discord thread for full details.')}`;
+    
+    // Safety check: Discord button URLs have a maximum length of 512 characters.
+    if (url.length > 500) {
+        url = `${baseUrl}&text=${encodeURIComponent((eventData.title || 'UTM Event').slice(0, 50))}`;
+        if (datesParam) url += `&dates=${datesParam}`;
+        if (eventData.location) url += `&location=${encodeURIComponent(eventData.location.slice(0, 50))}`;
+        url += `&details=${encodeURIComponent('View Discord details.')}`;
+    }
+    
+    return url;
+}
+
 async function postToDiscord(discordChannel, eventData, channelUsername, originalText) {
-    const descriptionText = eventData.translatedText || originalText || '';
+    const descriptionText = eventData.exactText || originalText || '';
 
     const truncatedDescription = descriptionText.length > 4096
         ? descriptionText.slice(0, 4090) + '…'
@@ -320,32 +387,44 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
     const finalTags = appliedTags.slice(0, 5);
 
     const components = [];
-    if (eventData.registrationUrl || eventData.benefits) {
-        const row = new ActionRowBuilder();
-        if (eventData.registrationUrl) {
-            let url = eventData.registrationUrl;
-            if (!url.startsWith('http')) url = 'https://' + url;
-            row.addComponents(
-                new ButtonBuilder()
-                    .setLabel('Register Now')
-                    .setStyle(ButtonStyle.Link)
-                    .setURL(url)
-            );
-        }
-        if (eventData.benefits) {
-            row.addComponents(
-                new ButtonBuilder()
-                    .setCustomId('view_benefits')
-                    .setLabel('View Benefits')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🎁')
-            );
-        }
+    const row = new ActionRowBuilder();
+
+    if (eventData.registrationUrl) {
+        let url = eventData.registrationUrl;
+        if (!url.startsWith('http')) url = 'https://' + url;
+        row.addComponents(
+            new ButtonBuilder()
+                .setLabel('Register Now')
+                .setStyle(ButtonStyle.Link)
+                .setURL(url)
+        );
+    }
+    if (eventData.startDate) {
+        const calUrl = generateGoogleCalendarUrl(eventData);
+        row.addComponents(
+            new ButtonBuilder()
+                .setLabel('Add to Calendar')
+                .setStyle(ButtonStyle.Link)
+                .setURL(calUrl)
+                .setEmoji('📅')
+        );
+    }
+    if (eventData.benefits) {
+        row.addComponents(
+            new ButtonBuilder()
+                .setCustomId('view_benefits')
+                .setLabel('View Benefits')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🎁')
+        );
+    }
+
+    if (row.components.length > 0) {
         components.push(row);
     }
 
     const payload = {
-        name: `${emoji} ${safeTitle}`,
+        name: safeTitle,
         message: { embeds: [embed] }
     };
     if (components.length > 0) payload.message.components = components;
@@ -355,8 +434,8 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
         const thread = await discordChannel.threads.create(payload);
 
         db.run(
-            'INSERT INTO telegram_events (thread_id, title, benefits, registration_url) VALUES (?, ?, ?, ?)',
-            [thread.id, rawTitle, eventData.benefits || null, eventData.registrationUrl || null]
+            'INSERT INTO telegram_events (thread_id, title, benefits, registration_url, event_end_date, closed) VALUES (?, ?, ?, ?, ?, 0)',
+            [thread.id, rawTitle, eventData.benefits || null, eventData.registrationUrl || null, eventData.eventEndDate || null]
         );
     } catch (err) {
         logError(`[TelegramListener] Discord API Error creating forum thread: ${err.message}`);
@@ -367,7 +446,7 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
 
 // ─── Scraper ──────────────────────────────────────────────────────────────────
 
-async function scrapeChannel(discordChannel, channelId, force = false, channelName = null) {
+async function scrapeChannel(discordChannel, channelId, force = false, channelName = null, blacklist = []) {
     try {
         // Fix for old DB entries that stored positive IDs
         let parsedId = channelId;
@@ -376,7 +455,7 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
         const targetId = /^-?\d+$/.test(parsedId) ? BigInt(parsedId) : parsedId;
         const messages = await state.telegramClient.getMessages(targetId, { limit: 50 });
         let total = 0, skippedShort = 0, skippedSeen = 0, skippedDupe = 0,
-            skippedPast = 0, sentToGemini = 0, eventsFound = 0;
+            skippedPast = 0, skippedBlacklisted = 0, sentToGemini = 0, eventsFound = 0;
 
         logInfo(`[DEBUG] Channel ${channelId}: ${messages.length} total messages`);
 
@@ -387,6 +466,17 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
                 skippedShort++;
                 logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (short/empty)`);
                 continue;
+            }
+
+            // Case-insensitive blacklist keyword filtering before seen checks or Gemini calls
+            if (blacklist.length > 0) {
+                const lowerMsg = msg.message.toLowerCase();
+                const matchedKeyword = blacklist.find(kw => lowerMsg.includes(kw));
+                if (matchedKeyword) {
+                    skippedBlacklisted++;
+                    logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (contains blacklisted keyword: "${matchedKeyword}")`);
+                    continue;
+                }
             }
 
             if (!force) {
@@ -440,7 +530,7 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
 
         logInfo(
             `[DEBUG] ${channelId} SUMMARY: total=${total} short=${skippedShort} ` +
-            `seen=${skippedSeen} dupes=${skippedDupe} past=${skippedPast} ` +
+            `seen=${skippedSeen} dupes=${skippedDupe} past=${skippedPast} blacklist=${skippedBlacklisted} ` +
             `gemini=${sentToGemini} events=${eventsFound}`
         );
 
@@ -449,6 +539,65 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
         logError(`[TelegramListener] Error scraping ${channelId}: ${err.message}`);
         return { eventsFound: 0, sentToGemini: 0 };
     }
+}
+
+// Automatically locks and archives Discord forum threads for events that have ended
+async function autoClosePastEvents(discordClient) {
+    logInfo('[AutoClose] Running auto-close checks for past events...');
+    
+    return new Promise((resolve, reject) => {
+        db.all(
+            'SELECT thread_id, title, event_end_date FROM telegram_events WHERE (closed = 0 OR closed IS NULL) AND event_end_date IS NOT NULL',
+            [],
+            async (err, rows) => {
+                if (err) {
+                    logError(`[AutoClose] Database error: ${err.message}`);
+                    return reject(err);
+                }
+                
+                if (!rows || rows.length === 0) {
+                    logInfo('[AutoClose] No open events to check.');
+                    return resolve(0);
+                }
+                
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const todayISO = `${year}-${month}-${day}`;
+                
+                let closedCount = 0;
+                for (const row of rows) {
+                    if (row.event_end_date < todayISO) {
+                        try {
+                            const thread = await discordClient.channels.fetch(row.thread_id).catch(() => null);
+                            if (thread) {
+                                await thread.send('🔒 **This event has ended.** The thread is now locked and archived.').catch(() => {});
+                                await thread.setLocked(true, 'Event has ended');
+                                await thread.setArchived(true, 'Event has ended');
+                                logInfo(`[AutoClose] Locked and archived thread ${row.thread_id} ("${row.title}")`);
+                            } else {
+                                logInfo(`[AutoClose] Thread ${row.thread_id} not found in Discord, marking as closed in DB.`);
+                            }
+                            
+                            await new Promise((resDb, rejDb) => {
+                                db.run('UPDATE telegram_events SET closed = 1 WHERE thread_id = ?', [row.thread_id], (errDb) => {
+                                    if (errDb) rejDb(errDb);
+                                    else resDb();
+                                });
+                            });
+                            closedCount++;
+                        } catch (threadErr) {
+                            logError(`[AutoClose] Failed to close thread ${row.thread_id}: ${threadErr.message}`);
+                        }
+                    }
+                }
+                
+                logInfo(`[AutoClose] Closed ${closedCount} past event thread(s).`);
+                resolve(closedCount);
+            }
+        );
+    });
 }
 
 // Exported so Discord /scrape command can invoke it manually
@@ -478,6 +627,13 @@ async function runScrape(discordClient, options = {}) {
         return { error: 'Discord event channel not found.' };
     }
 
+    let blacklist = [];
+    try {
+        blacklist = await getKeywordBlacklist();
+    } catch (err) {
+        logError(`[TelegramListener] Error fetching blacklist: ${err.message}`);
+    }
+
     let channelsToScrape = await getChannelDetails();
     if (options.targetChannelId) {
         channelsToScrape = channelsToScrape.filter(ch => ch.channel_id === options.targetChannelId);
@@ -486,7 +642,7 @@ async function runScrape(discordClient, options = {}) {
     let totalEvents = 0, totalGemini = 0;
 
     for (const ch of channelsToScrape) {
-        const { eventsFound, sentToGemini } = await scrapeChannel(discordChannel, ch.channel_id, options.force, ch.channel_name);
+        const { eventsFound, sentToGemini } = await scrapeChannel(discordChannel, ch.channel_id, options.force, ch.channel_name, blacklist);
         totalEvents += eventsFound;
         totalGemini += sentToGemini;
     }
@@ -533,6 +689,10 @@ async function start(discordClient) {
     await runScrape(discordClient);
     cron.schedule(cronExpr, () => runScrape(discordClient));
     logInfo(`[TelegramListener] Scheduled every ${intervalHours} hours.`);
+
+    // Run past event auto-closing daily, and once on boot
+    cron.schedule('0 0 * * *', () => autoClosePastEvents(discordClient));
+    autoClosePastEvents(discordClient).catch(err => logError(`[AutoClose] Error on startup: ${err.message}`));
 }
 
 module.exports = { start, runScrape };

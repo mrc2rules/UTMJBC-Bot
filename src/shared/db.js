@@ -29,7 +29,18 @@ db.serialize(() => {
         thread_id        TEXT PRIMARY KEY,
         title            TEXT,
         benefits         TEXT,
-        registration_url TEXT
+        registration_url TEXT,
+        event_end_date   TEXT,
+        closed           INTEGER DEFAULT 0
+    )`);
+    db.run(`ALTER TABLE telegram_events ADD COLUMN event_end_date TEXT`, () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN closed INTEGER DEFAULT 0`, () => {});
+
+    // ── Telegram blacklist ──────────────────────────────────────────────────
+    db.run(`CREATE TABLE IF NOT EXISTS telegram_blacklist (
+        keyword TEXT PRIMARY KEY,
+        added_by TEXT,
+        added_at INTEGER
     )`);
 
     // ── Migration: Normalize legacy positive numeric IDs to -100 prefixed ───
