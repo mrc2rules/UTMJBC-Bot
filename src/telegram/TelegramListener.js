@@ -335,12 +335,18 @@ async function postToDiscord(discordChannel, eventData, channelUsername) {
     if (components.length > 0) payload.message.components = components;
     if (finalTags.length > 0) payload.appliedTags = finalTags;
 
-    const thread = await discordChannel.threads.create(payload);
+    try {
+        const thread = await discordChannel.threads.create(payload);
 
-    db.run(
-        'INSERT INTO telegram_events (thread_id, title, benefits, registration_url) VALUES (?, ?, ?, ?)',
-        [thread.id, rawTitle, eventData.benefits || null, eventData.registrationUrl || null]
-    );
+        db.run(
+            'INSERT INTO telegram_events (thread_id, title, benefits, registration_url) VALUES (?, ?, ?, ?)',
+            [thread.id, rawTitle, eventData.benefits || null, eventData.registrationUrl || null]
+        );
+    } catch (err) {
+        logError(`[TelegramListener] Discord API Error creating forum thread: ${err.message}`);
+        if (err.rawError) logError(JSON.stringify(err.rawError));
+        throw err; // rethrow to be caught by scrapeChannel
+    }
 }
 
 // ─── Scraper ──────────────────────────────────────────────────────────────────
