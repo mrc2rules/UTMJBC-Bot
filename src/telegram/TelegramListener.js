@@ -1,13 +1,66 @@
 const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
 const cron = require('node-cron');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const config = require('../../config/config.json');
 
 const db = require('../shared/db');
 const state = require('../shared/state');
 const { getChannels } = require('./ChannelManager');
+
+function logInfo(msg) {
+    console.log(msg);
+    appendToLog(`[INFO] ${msg}`);
+}
+
+function logError(msg) {
+    console.error(msg);
+    appendToLog(`[ERROR] ${msg}`);
+}
+
+function logWarn(msg) {
+    console.warn(msg);
+    appendToLog(`[WARN] ${msg}`);
+}
+
+let liveLogBuffer = '';
+let liveLogTimeout = null;
+
+function flushLiveLogs() {
+    if (!liveLogBuffer || !state.discordClient) return;
+    const msg = liveLogBuffer;
+    liveLogBuffer = '';
+    liveLogTimeout = null;
+    
+    const logChannel = state.discordClient.channels.cache.get('1519284305464004678');
+    if (logChannel) {
+        logChannel.send(`\`\`\`\n${msg.substring(0, 1990)}\n\`\`\``).catch(() => {});
+    }
+}
+
+function appendToLog(msg) {
+    const timestamp = new Date().toISOString();
+    const logStr = `[${timestamp}] ${msg}\n`;
+    const logDir = path.join(__dirname, '../../logs');
+    const logPath = path.join(logDir, 'telegram.log');
+    
+    if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+    }
+    fs.appendFile(logPath, logStr, () => {});
+    
+    liveLogBuffer += logStr;
+    if (!liveLogTimeout) {
+        liveLogTimeout = setTimeout(flushLiveLogs, 2000);
+    }
+    if (liveLogBuffer.length > 1800) {
+        clearTimeout(liveLogTimeout);
+        flushLiveLogs();
+    }
+}
 
 // ─── Database Helpers ─────────────────────────────────────────────────────────
 
@@ -23,8 +76,8 @@ function hashMessageText(text) {
 function isAlreadySeen(messageId, channel) {
     return new Promise((resolve, reject) => {
         db.get(
-            'SELECT 1 FROM seen_messages WHERE message_id = ? AND channel = ?',
-            [`${messageId}`, channel],
+            'SELECT 1 FROM seen_messages WHERE (message_id = ? OR message_id = ?) AND channel = ?',
+            [`${channel}_${messageId}`, `${messageId}`, channel],
             (err, row) => {
                 if (err) return reject(err);
                 resolve(!!row);
@@ -49,7 +102,7 @@ function isAlreadySeenByHash(hash) {
 function markAsSeen(messageId, channel, hash) {
     db.run(
         'INSERT OR IGNORE INTO seen_messages (message_id, channel, content_hash, posted_at) VALUES (?, ?, ?, ?)',
-        [`${messageId}`, channel, hash || null, Date.now()]
+        [`${channel}_${messageId}`, channel, hash || null, Date.now()]
     );
 }
 
@@ -61,7 +114,7 @@ function sleep(ms) {
 
 // ─── LLM Analysis ─────────────────────────────────────────────────────────────
 
-async function analyseWithGemma(text) {
+async function analyseWithGemini(text) {
     const today = new Date().toLocaleDateString('en-MY', {
         weekday: 'long',
         year: 'numeric',
@@ -69,96 +122,92 @@ async function analyseWithGemma(text) {
         day: 'numeric'
     });
 
-    const prompt = `You are an expert Event Data Extractor for Universiti Teknologi Malaysia (UTM).
+    const systemInstruction = `You are an expert Event Data Extractor for Universiti Teknologi Malaysia (UTM).
 Today's Date: ${today}.
 
-Analyse the Telegram message below and return ONLY a raw JSON object — no markdown, no explanation, no text before or after the JSON.
-
-MESSAGE:
-"""
-${text}
-"""
-
-━━━ RULE 1 — EVENT CHECK ━━━
-A message IS an event if a student can Attend, Register, Apply, or Compete as a direct result of it.
+<rules>
+RULE 1: A message IS an event if a student can Attend, Register, Apply, or Compete as a direct result of it.
 Classify it as a Club Announcement if it is an internal update or reminder for existing members.
 These are NOT events and must return { "isEvent": false }:
 - Admin-only or EXCO-only internal meetings with no open participation
 - General university news, academic policy notices, or timetable updates
 - Job postings, scholarship listings, or external advertisements
 - Awareness posts, tips, guides, or support service announcements
+- Announcements, reminders, and notices
 
-If unsure, return { "isEvent": false }.
+RULE 2: If the event date can be determined AND it has already passed relative to Today's Date above, return { "isEvent": false, "_pastEvent": true }. Do not post stale events.
 
-━━━ RULE 2 — PAST EVENT FILTER ━━━
-If the event date can be determined AND it has already passed relative to Today's Date above,
-return { "isEvent": false }. Do not post stale events.
-
-━━━ RULE 3 — LANGUAGE ━━━
-The 'title' and 'description' fields must always be in English.
-If the message is in Malay or mixed Malay/English, translate them.
+RULE 3: The 'title' and 'description' fields must always be in English. If the message is in Malay, translate them.
 Set 'originalLanguage' to "english", "malay", or "other".
-Set 'translatedText' to a full English translation if the original is not English, otherwise null.
+Set 'translatedText' to a full English translation if not English, otherwise null.
 
-━━━ RULE 4 — EVENT TYPE ━━━
-Classify as exactly one of:
-- "Club Activity"                  -> club-run activity open for members or students to join/attend
-- "Club Recruitment"               -> open recruitment, tryouts, or intake for joining a club or team
-- "Club Announcement"              -> internal club update, meeting reminder, or notice for existing members
-- "Competition / Hackathon"        -> competitive event students can enter or register for
-- "Talk / Seminar / Workshop"      -> educational or informational session students can attend
-- "Faculty / Department Event"     -> event at faculty or department level (bigger than one club, not university-wide)
-- "University-wide Event"          -> official UTM event open broadly across multiple faculties
-- "External / Collaboration Event" -> event run by or in partnership with an external organisation
+RULE 4: Classify as exactly one of: "Club Activity", "Club Recruitment", "Club Announcement", "Competition / Hackathon", "Talk / Seminar / Workshop", "Faculty / Department Event", "University-wide Event", "External / Collaboration Event".
 
-━━━ RULE 5 — DATE FORMAT ━━━
-- Format: "27 March 2026, 2:30 PM - 5:00 PM"
-- Date only (no time): "27 March 2026"
-- Multi-day range: "27 March 2026 - 29 March 2026"
-- Resolve relative references ("this Friday", "tomorrow", "next week") using Today's Date above
-- If the year is not mentioned in the message, assume the current year
-- If no date can be determined at all, return null — do NOT guess
+RULE 5: Format date: "27 March 2026, 2:30 PM - 5:00 PM" or "27 March 2026". Resolve relative dates. If no year, assume current year. If no date, return null.
 
-━━━ RULE 6 — COST ━━━
-- Free or clearly no payment required                    -> "Free"
-- Commitment fee or refundable deposit mentioned         -> "Refundable Deposit - RM[X]"
-- Specific paid price mentioned                          -> "Paid - RM[X]"
-- Payment required but no amount given                   -> "Paid"
-- Not mentioned at all                                   -> "Not specified"
+RULE 6: Cost: "Free", "Refundable Deposit - RM[X]", "Paid - RM[X]", "Paid", "Not specified".
 
-━━━ RULE 7 — MERIT ━━━
-Return true if UTM Merit points are mentioned anywhere in the message, false otherwise.
+RULE 7: Return true if UTM Merit points are mentioned anywhere, false otherwise.
 
-━━━ OUTPUT ━━━
-If it IS an event:
-{
-  "isEvent": true,
-  "type": "one of the 8 types above",
-  "title": "clear English title",
-  "date": "formatted string or null",
-  "location": "verbatim location, or 'Online' if clearly online, or null if unstated",
-  "description": "1-2 sentence action-oriented English summary of what students can do",
-  "originalLanguage": "english or malay or other",
-  "translatedText": "full English translation if not originally English, otherwise null",
-  "merit": true or false,
-  "cost": "per Rule 6 above"
-}
+RULE 8: Extract registration URL if any. Extract benefits (e.g., certificate, food) as a string if mentioned.
 
-If it is NOT an event (including past events):
-{ "isEvent": false }
+RULE 9: Topic Categorization. Choose ONE primary topic from:
+- Tech/Coding
+- Sports
+- Arts/Culture
+- Business/Career
+- Self-Dev
+- Community/Volunteer
+- Academic/Science
+- Other
+</rules>
 
-Your entire response must start with { and end with }. No other text.`;
+<task>
+Analyse the message and extract the required fields as per the strict JSON schema.
+</task>`;
+
+    const prompt = `MESSAGE:\n"""\n${text}\n"""`;
+
+    const schema = {
+        type: "object",
+        properties: {
+            isEvent: { type: "boolean" },
+            _pastEvent: { type: "boolean" },
+            type: { type: "string" },
+            topic: { type: "string" },
+            title: { type: "string" },
+            date: { type: "string", nullable: true },
+            location: { type: "string", nullable: true },
+            description: { type: "string" },
+            originalLanguage: { type: "string" },
+            translatedText: { type: "string", nullable: true },
+            merit: { type: "boolean" },
+            cost: { type: "string" },
+            registrationUrl: { type: "string", nullable: true },
+            benefits: { type: "string", nullable: true }
+        },
+        required: ["isEvent"]
+    };
 
     try {
         const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-12b-it:generateContent?key=${process.env.GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                    systemInstruction: { parts: [{ text: systemInstruction }] },
+                    contents: [
+                        { role: 'user', parts: [{ text: "Join our UTM web dev workshop! Tomorrow at N24. Free entry and merit given. Register at bit.ly/webdev. Food provided." }] },
+                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: true, _pastEvent: false, type: "Talk / Seminar / Workshop", topic: "Tech/Coding", title: "UTM Web Dev Workshop", date: "Tomorrow", location: "N24", description: "Learn web development at this workshop.", originalLanguage: "english", translatedText: null, merit: true, cost: "Free", registrationUrl: "bit.ly/webdev", benefits: "Food provided" }) }] },
+                        { role: 'user', parts: [{ text: "Just a reminder that our weekly meeting for EXCO members is tonight at 8pm." }] },
+                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: false, _pastEvent: false }) }] },
+                        { role: 'user', parts: [{ text: prompt }] }
+                    ],
                     generationConfig: {
-                        responseMimeType: 'application/json'
+                        temperature: 1.0,
+                        responseMimeType: 'application/json',
+                        responseSchema: schema
                     }
                 })
             }
@@ -172,14 +221,9 @@ Your entire response must start with { and end with }. No other text.`;
         const data = await res.json();
         const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '{"isEvent":false}';
 
-        try {
-            return JSON.parse(raw);
-        } catch {
-            const jsonMatch = raw.match(/\{[\s\S]*\}/);
-            return jsonMatch ? JSON.parse(jsonMatch[0]) : { isEvent: false };
-        }
+        return JSON.parse(raw);
     } catch (e) {
-        console.error('[TelegramListener] Gemma error:', e.message);
+        logError(`[TelegramListener] Gemini error: ${e.message}`);
         return { isEvent: false, _error: true };
     }
 }
@@ -207,6 +251,23 @@ function randomEmbedColor() {
     return EMBED_COLORS[Math.floor(Math.random() * EMBED_COLORS.length)];
 }
 
+const TOPIC_TAGS = {
+    'Tech/Coding': '1519277264661909554',
+    'Sports': '1519277357431525437',
+    'Arts/Culture': '1519277384107429908',
+    'Business/Career': '1519277415388549241',
+    'Self-Dev': '1519277443771269131',
+    'Community/Volunteer': '1519277473190383616',
+    'Academic/Science': '1519277534045278248'
+};
+
+const META_TAGS = {
+    'Merit': '1519276701262282792',
+    'Paid': '1519276747961536632',
+    'Free': '1519276780719050832',
+    'External': '1519278024506216609'
+};
+
 async function postToDiscord(discordChannel, eventData, channelUsername) {
     const descriptionText = eventData.translatedText || eventData.description || eventData.originalText || '';
 
@@ -215,12 +276,11 @@ async function postToDiscord(discordChannel, eventData, channelUsername) {
         : descriptionText;
 
     const rawTitle = eventData.title || 'Event Announcement';
-    const safeTitle = rawTitle.length > 250 ? rawTitle.slice(0, 247) + '...' : rawTitle;
+    const safeTitle = rawTitle.length > 95 ? rawTitle.slice(0, 95) + '...' : rawTitle;
 
     const emoji = EVENT_TYPE_EMOJI[eventData.type] || '📅';
 
     const embed = new EmbedBuilder()
-        .setTitle(`${emoji} ${safeTitle}`)
         .setDescription(truncatedDescription)
         .setColor(randomEmbedColor())
         .addFields(
@@ -234,32 +294,78 @@ async function postToDiscord(discordChannel, eventData, channelUsername) {
         .setFooter({ text: 'UTMJBC Event Feed • Sourced from Telegram' })
         .setTimestamp();
 
-    await discordChannel.send({ embeds: [embed] });
+    const appliedTags = [];
+    if (eventData.topic && TOPIC_TAGS[eventData.topic]) appliedTags.push(TOPIC_TAGS[eventData.topic]);
+    if (eventData.merit) appliedTags.push(META_TAGS['Merit']);
+    if (eventData.cost && eventData.cost.toLowerCase() === 'free') appliedTags.push(META_TAGS['Free']);
+    if (eventData.cost && eventData.cost.toLowerCase().includes('paid')) appliedTags.push(META_TAGS['Paid']);
+    if (eventData.type === 'External / Collaboration Event') appliedTags.push(META_TAGS['External']);
+
+    const finalTags = appliedTags.slice(0, 5);
+
+    const components = [];
+    if (eventData.registrationUrl || eventData.benefits) {
+        const row = new ActionRowBuilder();
+        if (eventData.registrationUrl) {
+            let url = eventData.registrationUrl;
+            if (!url.startsWith('http')) url = 'https://' + url;
+            row.addComponents(
+                new ButtonBuilder()
+                    .setLabel('Register Now')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(url)
+            );
+        }
+        if (eventData.benefits) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId('view_benefits')
+                    .setLabel('View Benefits')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🎁')
+            );
+        }
+        components.push(row);
+    }
+
+    const payload = {
+        name: `${emoji} ${safeTitle}`,
+        message: { embeds: [embed] }
+    };
+    if (components.length > 0) payload.message.components = components;
+    if (finalTags.length > 0) payload.appliedTags = finalTags;
+
+    const thread = await discordChannel.threads.create(payload);
+
+    db.run(
+        'INSERT INTO telegram_events (thread_id, title, benefits, registration_url) VALUES (?, ?, ?, ?)',
+        [thread.id, rawTitle, eventData.benefits || null, eventData.registrationUrl || null]
+    );
 }
 
 // ─── Scraper ──────────────────────────────────────────────────────────────────
 
 async function scrapeChannel(discordChannel, channelId) {
     try {
-        const messages = await state.telegramClient.getMessages(channelId, { limit: 20 });
+        const messages = await state.telegramClient.getMessages(channelId, { limit: 50 });
         let total = 0, skippedShort = 0, skippedSeen = 0, skippedDupe = 0,
-            skippedPast = 0, sentToGemma = 0, eventsFound = 0;
+            skippedPast = 0, sentToGemini = 0, eventsFound = 0;
 
-        console.log(`[DEBUG] Channel ${channelId}: ${messages.length} total messages`);
+        logInfo(`[DEBUG] Channel ${channelId}: ${messages.length} total messages`);
 
         for (const msg of messages) {
             total++;
 
             if (!msg.message || msg.message.trim().length < 30) {
                 skippedShort++;
-                console.log(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (short/empty)`);
+                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (short/empty)`);
                 continue;
             }
 
             const seen = await isAlreadySeen(msg.id, channelId);
             if (seen) {
                 skippedSeen++;
-                console.log(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (already seen)`);
+                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (already seen)`);
                 continue;
             }
 
@@ -268,18 +374,18 @@ async function scrapeChannel(discordChannel, channelId) {
             if (hashSeen) {
                 skippedDupe++;
                 markAsSeen(msg.id, channelId, hash);
-                console.log(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (duplicate content)`);
+                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (duplicate content)`);
                 continue;
             }
 
-            if (sentToGemma > 0) await sleep(1500);
-            sentToGemma++;
-            console.log(`[DEBUG] ${channelId} msg ${msg.id}: SENT TO GEMMA`);
+            if (sentToGemini > 0) await sleep(4200);
+            sentToGemini++;
+            logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SENT TO GEMINI`);
 
-            const result = await analyseWithGemma(msg.message);
+            const result = await analyseWithGemini(msg.message);
 
             if (result._error) {
-                console.warn(`[TelegramListener] Gemma failed for ${channelId} msg ${msg.id}, will retry next cycle`);
+                logWarn(`[TelegramListener] Gemini failed for ${channelId} msg ${msg.id}, will retry next cycle`);
                 continue;
             }
 
@@ -287,39 +393,39 @@ async function scrapeChannel(discordChannel, channelId) {
 
             if (!result.isEvent) {
                 const reason = result._pastEvent ? 'PAST_EVENT' : 'NOT_EVENT';
-                console.log(`[DEBUG] ${channelId} msg ${msg.id}: GEMMA says ${reason}`);
+                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says ${reason}`);
                 if (result._pastEvent) skippedPast++;
                 continue;
             }
 
-            console.log(`[DEBUG] ${channelId} msg ${msg.id}: GEMMA says EVENT (${result.type})`);
+            logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says EVENT (${result.type})`);
             eventsFound++;
             await postToDiscord(discordChannel, result, channelId);
-            console.log(`[TelegramListener] Posted: ${result.title} [${result.type}]`);
+            logInfo(`[TelegramListener] Posted: ${result.title} [${result.type}]`);
         }
 
-        console.log(
+        logInfo(
             `[DEBUG] ${channelId} SUMMARY: total=${total} short=${skippedShort} ` +
             `seen=${skippedSeen} dupes=${skippedDupe} past=${skippedPast} ` +
-            `gemma=${sentToGemma} events=${eventsFound}`
+            `gemini=${sentToGemini} events=${eventsFound}`
         );
 
-        return { eventsFound, sentToGemma };
+        return { eventsFound, sentToGemini };
     } catch (err) {
-        console.error(`[TelegramListener] Error scraping ${channelId}:`, err.message);
-        return { eventsFound: 0, sentToGemma: 0 };
+        logError(`[TelegramListener] Error scraping ${channelId}: ${err.message}`);
+        return { eventsFound: 0, sentToGemini: 0 };
     }
 }
 
 // Exported so Discord /scrape command can invoke it manually
 async function runScrape(discordClient) {
     if (state.isScraping) {
-        console.warn('[TelegramListener] Scrape already in progress, skipping.');
+        logWarn('[TelegramListener] Scrape already in progress, skipping.');
         return { skipped: true };
     }
 
     state.isScraping = true;
-    console.log('[TelegramListener] Starting scrape cycle...');
+    logInfo('[TelegramListener] Starting scrape cycle...');
 
     // Resolve Discord event channel once per cycle — cache-first to avoid redundant API calls
     let discordChannel = discordClient.channels.cache.get(config.eventPostChannelId);
@@ -328,29 +434,32 @@ async function runScrape(discordClient) {
     }
     if (!discordChannel) {
         state.isScraping = false;
-        console.error('[TelegramListener] Discord event channel not found. Aborting scrape cycle.');
+        logError('[TelegramListener] Discord event channel not found. Aborting scrape cycle.');
         return { error: 'Discord event channel not found.' };
     }
 
     const channels = await getChannels();
-    let totalEvents = 0, totalGemma = 0;
+    let totalEvents = 0, totalGemini = 0;
 
     for (const ch of channels) {
-        const { eventsFound, sentToGemma } = await scrapeChannel(discordChannel, ch);
+        const { eventsFound, sentToGemini } = await scrapeChannel(discordChannel, ch);
         totalEvents += eventsFound;
-        totalGemma += sentToGemma;
+        totalGemini += sentToGemini;
     }
 
     state.isScraping = false;
-    console.log('[TelegramListener] Scrape cycle complete.');
-    return { channelsScraped: channels.length, totalEvents, totalGemma };
+    logInfo('[TelegramListener] Scrape cycle complete.');
+
+    return { channelsScraped: channels.length, totalEvents, totalGemini };
 }
 
 // ─── Entry Point ──────────────────────────────────────────────────────────────
 
 async function start(discordClient) {
+    state.discordClient = discordClient; // Store for live logging
+    
     if (!config.telegramApiId || !config.telegramApiHash) {
-        return console.warn('[TelegramListener] Telegram API credentials not set. Skipping.');
+        return logWarn('[TelegramListener] Telegram API credentials not set. Skipping.');
     }
 
     const session = new StringSession(config.telegramSession || '');
@@ -362,24 +471,24 @@ async function start(discordClient) {
         phoneNumber: async () => config.telegramPhone,
         password:    async () => config.telegramPassword || '',
         phoneCode:   async () => {
-            console.log('[TelegramListener] Enter the Telegram login code:');
+            logInfo('[TelegramListener] Enter the Telegram login code:');
             return new Promise(resolve => process.stdin.once('data', d => resolve(d.toString().trim())));
         },
-        onError: (err) => console.error('[TelegramListener] Auth error:', err),
+        onError: (err) => logError(`[TelegramListener] Auth error: ${err}`),
     });
 
     // Store connected client in shared state so command handlers can access it
     state.telegramClient = telegramClient;
 
-    console.log('[TelegramListener] Connected to Telegram!');
-    console.log('[TelegramListener] Save this session string to config.telegramSession:\n', telegramClient.session.save());
+    logInfo('[TelegramListener] Connected to Telegram!');
+    logInfo('[TelegramListener] Save this session string to config.telegramSession:\n' + telegramClient.session.save());
 
     const intervalHours = config.telegramScrapeIntervalHours || 6;
     const cronExpr = `0 */${intervalHours} * * *`;
 
     await runScrape(discordClient);
     cron.schedule(cronExpr, () => runScrape(discordClient));
-    console.log(`[TelegramListener] Scheduled every ${intervalHours} hours.`);
+    logInfo(`[TelegramListener] Scheduled every ${intervalHours} hours.`);
 }
 
 module.exports = { start, runScrape };

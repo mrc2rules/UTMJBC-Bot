@@ -1,0 +1,90 @@
+name: CI + Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: prod-and-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy-bot:
+    name: Deploy bot (AlwaysData)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://services-jbcemail.alwaysdata.net
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH (AlwaysData-safe)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/home/jbcemail/EmailVerify"
+            BOT_PAT="node /home/jbcemail/EmailVerify/src/EmailBot.js"
+            SHARD_PAT="node /home/jbcemail/EmailVerify/src/sharder.js"
+
+            cd "$APP_DIR"
+            git fetch origin main
+            git reset --hard origin/main
+            npm ci --omit=dev
+
+            nohup bash -lc "
+              sleep 2
+              pkill -TERM -f \"$BOT_PAT\" || true
+              pkill -TERM -f \"$SHARD_PAT\" || true
+            " >/dev/null 2>&1 < /dev/null &
+
+            echo "Deploy finished. AlwaysData should restart services automatically."
+
+  pages-build:
+    name: Build Pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install MkDocs
+        run: pip install mkdocs-material
+
+      - name: Build docs
+        run: mkdocs build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  pages-deploy:
+    name: Deploy Pages
+    needs: pages-build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

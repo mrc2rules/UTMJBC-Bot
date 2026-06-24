@@ -21,6 +21,14 @@ db.serialize(() => {
         added_by   TEXT,
         added_at   INTEGER
     )`);
+
+    // ── Telegram events (stores event info for discord buttons) ─────────────
+    db.run(`CREATE TABLE IF NOT EXISTS telegram_events (
+        thread_id        TEXT PRIMARY KEY,
+        title            TEXT,
+        benefits         TEXT,
+        registration_url TEXT
+    )`);
 });
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────

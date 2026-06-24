@@ -46,6 +46,13 @@ module.exports = {
             );
         }
 
+        if (entity.className !== 'Channel' && entity.className !== 'Chat') {
+            return interaction.editReply(
+                `❌ The entity \`${input}\` is a **${entity.className}**, not a Channel or Group.\n` +
+                `Only Channels and Groups can be added to the scrape list.`
+            );
+        }
+
         // Use the resolved numeric ID as the canonical identifier
         const channelId = String(entity.id);
         const channelTitle = entity.title || entity.username || channelId;

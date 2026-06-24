@@ -42,6 +42,19 @@ async function registerCommands() {
 // Call this once during bot startup, before the client logs in.
 function attachInteractionHandler(discordClient) {
     discordClient.on('interactionCreate', async (interaction) => {
+        if (interaction.isButton()) {
+            if (interaction.customId === 'view_benefits') {
+                const db = require('../shared/db');
+                db.get('SELECT benefits FROM telegram_events WHERE thread_id = ?', [interaction.channelId], (err, row) => {
+                    if (err || !row || !row.benefits) {
+                        return interaction.reply({ content: 'No benefits information found for this event.', ephemeral: true }).catch(() => {});
+                    }
+                    return interaction.reply({ content: `**Benefits for this event:**\n${row.benefits}`, ephemeral: true }).catch(() => {});
+                });
+            }
+            return;
+        }
+
         if (!interaction.isChatInputCommand()) return;
 
         const command = commandMap.get(interaction.commandName);
