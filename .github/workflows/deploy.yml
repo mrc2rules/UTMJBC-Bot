@@ -2,8 +2,7 @@ name: Auto Deploy to server
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 concurrency:
   group: deploy-production
@@ -15,32 +14,48 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout repository code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Deploy over SSH (AlwaysData services)
+      - name: Deploy over SSH (detached restart + health check)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
-          script_stop: true
           command_timeout: 30m
           script: |
             set -euo pipefail
 
             APP_DIR="/home/jbcemail/EmailVerify"
-            BOT_CMD="node /home/jbcemail/EmailVerify/src/EmailBot.js"
-            SHARDER_CMD="node /home/jbcemail/EmailVerify/src/sharder.js"
+            BOT_PAT="node /home/jbcemail/EmailVerify/src/EmailBot.js"
+            SHARD_PAT="node /home/jbcemail/EmailVerify/src/sharder.js"
 
             cd "$APP_DIR"
             git fetch origin main
             git reset --hard origin/main
             npm ci --omit=dev
 
-            # Trigger AlwaysData restart by terminating current workers.
-            pkill -TERM -f "$BOT_CMD" || true
-            pkill -TERM -f "$SHARDER_CMD" || true
-            sleep 3
+            # Ask supervisor to recycle both workers, but do it detached
+            nohup bash -lc "
+              sleep 2
+              pkill -TERM -f \"$BOT_PAT\" || true
+              pkill -TERM -f \"$SHARD_PAT\" || true
+            " >/dev/null 2>&1 < /dev/null & disown || true
 
-            echo "Deploy complete. If AlwaysData supervision is enabled, services are restarting."
+            # Wait for AlwaysData supervisor to bring them back
+            for i in $(seq 1 20); do
+              sleep 2
+              BOT_OK=0
+              SHARD_OK=0
+              pgrep -f "$BOT_PAT" >/dev/null && BOT_OK=1 || true
+              pgrep -f "$SHARD_PAT" >/dev/null && SHARD_OK=1 || true
+
+              if [ "$BOT_OK" -eq 1 ] && [ "$SHARD_OK" -eq 1 ]; then
+                echo "✅ Services are running (EmailBot + sharder)."
+                exit 0
+              fi
+            done
+
+            echo "❌ Services did not come back in time."
+            echo "Check AlwaysData service logs/panel for startup errors."
+            exit 1
