@@ -55,8 +55,14 @@ module.exports = {
             );
         }
 
-        // Use the resolved numeric ID as the canonical identifier
-        const channelId = String(entity.id);
+        // Format the ID correctly for gramjs future resolution
+        let channelId = String(entity.id);
+        if (entity.className === 'Channel' && !channelId.startsWith('-100')) {
+            channelId = '-100' + channelId;
+        } else if (entity.className === 'Chat' && !channelId.startsWith('-')) {
+            channelId = '-' + channelId;
+        }
+        
         const channelTitle = entity.title || entity.username || channelId;
 
         const alreadyTracked = await channelExists(channelId);

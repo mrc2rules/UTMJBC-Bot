@@ -35,8 +35,11 @@ module.exports = {
             let title = 'Unknown Channel';
             if (state.telegramClient) {
                 try {
-                    // channel_id is numeric so pass it as BigInt just in case
-                    const targetId = /^-?\d+$/.test(ch.channel_id) ? BigInt(ch.channel_id) : ch.channel_id;
+                    // Fix for old DB entries that stored positive IDs
+                    let parsedId = ch.channel_id;
+                    if (/^\d+$/.test(parsedId)) parsedId = '-100' + parsedId;
+                    
+                    const targetId = /^-?\d+$/.test(parsedId) ? BigInt(parsedId) : parsedId;
                     const entity = await state.telegramClient.getEntity(targetId);
                     title = entity.title || entity.username || 'Unknown Channel';
                 } catch (err) {

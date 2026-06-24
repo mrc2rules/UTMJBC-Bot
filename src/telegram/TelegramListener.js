@@ -347,7 +347,12 @@ async function postToDiscord(discordChannel, eventData, channelUsername) {
 
 async function scrapeChannel(discordChannel, channelId) {
     try {
-        const messages = await state.telegramClient.getMessages(channelId, { limit: 50 });
+        // Fix for old DB entries that stored positive IDs
+        let parsedId = channelId;
+        if (/^\d+$/.test(parsedId)) parsedId = '-100' + parsedId;
+        
+        const targetId = /^-?\d+$/.test(parsedId) ? BigInt(parsedId) : parsedId;
+        const messages = await state.telegramClient.getMessages(targetId, { limit: 50 });
         let total = 0, skippedShort = 0, skippedSeen = 0, skippedDupe = 0,
             skippedPast = 0, sentToGemini = 0, eventsFound = 0;
 
@@ -428,9 +433,10 @@ async function runScrape(discordClient) {
     logInfo('[TelegramListener] Starting scrape cycle...');
 
     // Resolve Discord event channel once per cycle — cache-first to avoid redundant API calls
-    let discordChannel = discordClient.channels.cache.get(config.eventPostChannelId);
+    const targetChannelId = '1519270170873565405';
+    let discordChannel = discordClient.channels.cache.get(targetChannelId);
     if (!discordChannel) {
-        discordChannel = await discordClient.channels.fetch(config.eventPostChannelId).catch(() => null);
+        discordChannel = await discordClient.channels.fetch(targetChannelId).catch(() => null);
     }
     if (!discordChannel) {
         state.isScraping = false;
