@@ -1,6 +1,6 @@
 const { PermissionsBitField, ApplicationCommandOptionType } = require('discord.js');
 const { runScrape } = require('../telegram/TelegramListener');
-const { getChannelDetails } = require('../telegram/ChannelManager');
+const { getChannelDetails, clearSeenMessages } = require('../telegram/ChannelManager');
 const state = require('../shared/state');
 
 module.exports = {
@@ -23,7 +23,7 @@ module.exports = {
             },
             {
                 name: 'cleardb',
-                description: 'Optional. Clear the seen_messages database before scraping.',
+                description: 'Optional. Clear the seen_messages database only (no scrape is run).',
                 type: ApplicationCommandOptionType.Boolean,
                 required: false,
             }
@@ -74,8 +74,19 @@ module.exports = {
         const force = interaction.options.getBoolean('force') || false;
         const cleardb = interaction.options.getBoolean('cleardb') || false;
 
+        // cleardb-only mode: wipe the seen_messages table and return immediately
+        if (cleardb) {
+            try {
+                const deleted = await clearSeenMessages();
+                return interaction.editReply(`🗑️ **Seen messages database cleared!** Removed ${deleted} entr${deleted === 1 ? 'y' : 'ies'}.\nRun \`/scrape\` without \`cleardb\` to start a fresh scrape cycle.`);
+            } catch (err) {
+                console.error('[ScrapeCommand] cleardb error:', err);
+                return interaction.editReply('❌ Failed to clear the seen messages database.');
+            }
+        }
+
         try {
-            const result = await runScrape(interaction.client, { targetChannelId, force, cleardb });
+            const result = await runScrape(interaction.client, { targetChannelId, force });
             
             if (result.skipped) {
                 return interaction.editReply('⚠️ Scrape skipped (already running).');

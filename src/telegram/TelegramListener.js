@@ -113,6 +113,23 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ─── Language Detection ───────────────────────────────────────────────────────
+
+const MALAY_KEYWORDS = [
+    'dan', 'yang', 'untuk', 'dengan', 'dalam', 'pada', 'kepada',
+    'adalah', 'ini', 'itu', 'akan', 'telah', 'tidak', 'bagi', 'atau',
+    'semua', 'program', 'tarikh', 'masa', 'lokasi', 'anjuran',
+    'mahasiswa', 'sila', 'salam', 'disediakan', 'daftarkan', 'percuma',
+    'kolej', 'pelajar', 'universiti', 'pendaftaran', 'dianjurkan',
+    'kembali', 'bersama', 'komuniti', 'aktiviti', 'pertandingan'
+];
+
+function detectMalay(text) {
+    const words = text.toLowerCase().split(/\s+/);
+    const hits = words.filter(w => MALAY_KEYWORDS.includes(w)).length;
+    return hits >= 4;
+}
+
 // ─── LLM Analysis ─────────────────────────────────────────────────────────────
 
 async function analyseWithGemini(text) {
@@ -122,6 +139,8 @@ async function analyseWithGemini(text) {
         month: 'long',
         day: 'numeric'
     });
+
+    const isMalay = detectMalay(text);
 
     const systemInstruction = `You are an expert Event Data Extractor for Universiti Teknologi Malaysia (UTM).
 Today's Date: ${today}.
@@ -138,7 +157,7 @@ These are NOT events and must return { "isEvent": false }:
 
 RULE 2: Extract the event end date as "eventEndDate" in ISO format (YYYY-MM-DD). Do NOT evaluate whether the event is past — just extract the date accurately. If you can't determine the date, return null.
 
-RULE 3: You MUST extract the exact, original message text into 'exactText'. DO NOT summarize or truncate it. If the original message is in Malay or another language, translate the entire message into English and put the full translation into 'exactText' instead. The 'title' field must also always be in English.
+RULE 3: You MUST extract the exact, original message text into 'exactText'. DO NOT summarize or truncate it. If the original message is in Malay or another language, translate the ENTIRE message into English and put the full translation into 'exactText'. The 'title' field must ALWAYS be in English — never leave it empty or generic.
 
 RULE 4: Classify as exactly one of: "Club Activity", "Club Recruitment", "Club Announcement", "Competition / Hackathon", "Talk / Seminar / Workshop", "Faculty / Department Event", "University-wide Event", "External / Collaboration Event".
 
@@ -148,7 +167,7 @@ RULE 6: Cost: "Free", "Refundable Deposit - RM[X]", "Paid - RM[X]", "Paid", "Not
 
 RULE 7: Return true if UTM Merit points are mentioned anywhere, false otherwise.
 
-RULE 8: Extract registration URL if any. Extract benefits (e.g., certificate, food) as a string if mentioned.
+RULE 8: Extract registration URL if any.
 
 RULE 9: Topic Categorization. Choose ONE primary topic from:
 - Tech/Coding
@@ -163,13 +182,22 @@ RULE 9: Topic Categorization. Choose ONE primary topic from:
 RULE 10: Extract the event start date as "startDate" in ISO format (YYYY-MM-DD). If you can't determine it, return null.
 RULE 11: Extract the event start time as "startTime" in 24-hour format (HH:MM). If not specified, return null.
 RULE 12: Extract the event end time as "endTime" in 24-hour format (HH:MM). If not specified, return null.
+RULE 13: Set "sourceLanguage" to the original language of the message (e.g. "English", "Malay", "Mixed").
 </rules>
+
+<critical>
+The 'title' field is MANDATORY for events. You MUST always provide a clear, descriptive English event title. NEVER return an empty title or a generic title like "Event" or "Event Announcement".
+The 'exactText' field is MANDATORY for events. You MUST always populate it.
+</critical>
 
 <task>
 Analyse the message and extract the required fields as per the strict JSON schema.
 </task>`;
 
-    const prompt = `MESSAGE:\n"""\n${text}\n"""`;
+    let promptText = `MESSAGE:\n"""\n${text}\n"""`;
+    if (isMalay) {
+        promptText = `[LANGUAGE HINT: This message is in Malay. You MUST translate the entire message content into English before extracting fields. The 'title' and 'exactText' MUST be in English.]\n\n${promptText}`;
+    }
 
     const schema = {
         type: "object",
@@ -188,9 +216,9 @@ Analyse the message and extract the required fields as per the strict JSON schem
             merit: { type: "boolean" },
             cost: { type: "string" },
             registrationUrl: { type: "string", nullable: true },
-            benefits: { type: "string", nullable: true }
+            sourceLanguage: { type: "string" }
         },
-        required: ["isEvent"]
+        required: ["isEvent", "title", "exactText", "type", "topic", "merit", "cost", "sourceLanguage"]
     };
 
     try {
@@ -202,14 +230,30 @@ Analyse the message and extract the required fields as per the strict JSON schem
                 body: JSON.stringify({
                     systemInstruction: { parts: [{ text: systemInstruction }] },
                     contents: [
-                        { role: 'user', parts: [{ text: "Join our UTM web dev workshop! Tomorrow from 2:30 PM to 5:00 PM at N24. Free entry and merit given. Register at bit.ly/webdev. Food provided." }] },
-                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: true, type: "Talk / Seminar / Workshop", topic: "Tech/Coding", title: "UTM Web Dev Workshop", date: "Tomorrow, 2:30 PM - 5:00 PM", startDate: "2026-06-25", eventEndDate: "2026-06-25", startTime: "14:30", endTime: "17:00", location: "N24", exactText: "Join our UTM web dev workshop! Tomorrow from 2:30 PM to 5:00 PM at N24. Free entry and merit given. Register at bit.ly/webdev. Food provided.", merit: true, cost: "Free", registrationUrl: "bit.ly/webdev", benefits: "Food provided" }) }] },
+                        { role: 'user', parts: [{ text: "Join our UTM web dev workshop! Tomorrow from 2:30 PM to 5:00 PM at N24. Free entry and merit given. Register at bit.ly/webdev." }] },
+                        { role: 'model', parts: [{ text: JSON.stringify({
+                            isEvent: true,
+                            type: "Talk / Seminar / Workshop",
+                            topic: "Tech/Coding",
+                            title: "UTM Web Dev Workshop",
+                            date: "Tomorrow, 2:30 PM - 5:00 PM",
+                            startDate: "2026-06-25",
+                            eventEndDate: "2026-06-25",
+                            startTime: "14:30",
+                            endTime: "17:00",
+                            location: "N24",
+                            exactText: "Join our UTM web dev workshop! Tomorrow from 2:30 PM to 5:00 PM at N24. Free entry and merit given. Register at bit.ly/webdev.",
+                            merit: true,
+                            cost: "Free",
+                            registrationUrl: "bit.ly/webdev",
+                            sourceLanguage: "English"
+                        }) }] },
                         { role: 'user', parts: [{ text: "Just a reminder that our weekly meeting for EXCO members is tonight at 8pm." }] },
-                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: false }) }] },
-                        { role: 'user', parts: [{ text: prompt }] }
+                        { role: 'model', parts: [{ text: JSON.stringify({ isEvent: false, title: "", exactText: "", type: "Club Announcement", topic: "Other", merit: false, cost: "Not specified", sourceLanguage: "English" }) }] },
+                        { role: 'user', parts: [{ text: promptText }] }
                     ],
                     generationConfig: {
-                        temperature: 1.0,
+                        temperature: 0.5,
                         responseMimeType: 'application/json',
                         responseSchema: schema
                     }
@@ -225,7 +269,9 @@ Analyse the message and extract the required fields as per the strict JSON schem
         const data = await res.json();
         const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '{"isEvent":false}';
 
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        parsed._isMalay = isMalay;
+        return parsed;
     } catch (e) {
         logError(`[TelegramListener] Gemini error: ${e.message}`);
         return { isEvent: false, _error: true };
@@ -409,15 +455,7 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
                 .setEmoji('📅')
         );
     }
-    if (eventData.benefits) {
-        row.addComponents(
-            new ButtonBuilder()
-                .setCustomId('view_benefits')
-                .setLabel('View Benefits')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('🎁')
-        );
-    }
+
 
     if (row.components.length > 0) {
         components.push(row);
@@ -434,8 +472,8 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
         const thread = await discordChannel.threads.create(payload);
 
         db.run(
-            'INSERT INTO telegram_events (thread_id, title, benefits, registration_url, event_end_date, closed) VALUES (?, ?, ?, ?, ?, 0)',
-            [thread.id, rawTitle, eventData.benefits || null, eventData.registrationUrl || null, eventData.eventEndDate || null]
+            'INSERT INTO telegram_events (thread_id, title, registration_url, event_end_date, closed) VALUES (?, ?, ?, ?, 0)',
+            [thread.id, rawTitle, eventData.registrationUrl || null, eventData.eventEndDate || null]
         );
     } catch (err) {
         logError(`[TelegramListener] Discord API Error creating forum thread: ${err.message}`);
@@ -453,7 +491,8 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
         if (/^\d+$/.test(parsedId)) parsedId = '-100' + parsedId;
         
         const targetId = /^-?\d+$/.test(parsedId) ? BigInt(parsedId) : parsedId;
-        const messages = await state.telegramClient.getMessages(targetId, { limit: 50 });
+        const scrapeLimit = config.telegramScrapeLimit || 20;
+        const messages = await state.telegramClient.getMessages(targetId, { limit: scrapeLimit });
         let total = 0, skippedShort = 0, skippedSeen = 0, skippedDupe = 0,
             skippedPast = 0, skippedBlacklisted = 0, sentToGemini = 0, eventsFound = 0;
 
@@ -499,7 +538,8 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
 
             if (sentToGemini > 0) await sleep(4200);
             sentToGemini++;
-            logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SENT TO GEMINI`);
+            const langTag = detectMalay(msg.message) ? '[lang=Malay]' : '[lang=EN]';
+            logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SENT TO GEMINI ${langTag}`);
 
             const result = await analyseWithGemini(msg.message);
 
@@ -516,13 +556,19 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
                 continue;
             }
 
+            // Guard: skip events where Gemini failed to extract a real title
+            if (!result.title || result.title.trim().length === 0 || result.title === 'Event Announcement') {
+                logWarn(`[TelegramListener] ${channelId} msg ${msg.id}: SKIPPED (missing/generic title from Gemini)`);
+                continue;
+            }
+
             if (isEventPast(result)) {
                 logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SKIPPED (isEventPast determined past event)`);
                 skippedPast++;
                 continue;
             }
 
-            logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says EVENT (${result.type})`);
+            logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says EVENT (${result.type}) ${langTag} title="${result.title}"`);
             eventsFound++;
             await postToDiscord(discordChannel, result, channelName || channelId, msg.message);
             logInfo(`[TelegramListener] Posted: ${result.title} [${result.type}]`);
@@ -610,10 +656,7 @@ async function runScrape(discordClient, options = {}) {
     state.isScraping = true;
     logInfo('[TelegramListener] Starting scrape cycle...');
 
-    if (options.cleardb) {
-        logInfo('[TelegramListener] Clearing seen_messages database...');
-        await clearSeenMessages();
-    }
+
 
     // Resolve Discord event channel once per cycle — cache-first to avoid redundant API calls
     const targetDiscordChannelId = '1519270170873565405';
