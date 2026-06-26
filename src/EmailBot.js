@@ -429,7 +429,11 @@ bot.on('interactionCreate', async interaction => {
         let language
         try { language = serverSettings.language } catch { language = defaultLanguage }
         try {
-            if (interaction.member.permissions.has(PermissionsBitField.Flags.Administrator) || interaction.commandName === "data" || interaction.commandName === "verify" || interaction.commandName === "globalstats") {
+            const isLegacyPublic = ["data", "verify", "globalstats"].includes(interaction.commandName);
+            const isExplicitlyPublic = command.adminOnly === false;
+            const isUserAdmin = interaction.member.permissions.has(PermissionsBitField.Flags.Administrator);
+
+            if (isUserAdmin || isLegacyPublic || isExplicitlyPublic) {
                 await command.execute(interaction);
             } else {
                 await interaction.reply({ content: getLocale(language, "invalidPermissions"), flags: MessageFlags.Ephemeral });
@@ -441,7 +445,7 @@ bot.on('interactionCreate', async interaction => {
     })
 });
 
-process.on('SIGINT', () => process.exit(0))
+// SIGINT handler removed to allow db.js to cleanly close the SQLite database before process exit
 
 bot.login(token).catch((e) => {
     console.log("Failed to login: " + e.toString())

@@ -1,19 +1,28 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-const db = new sqlite3.Database(path.join(__dirname, '../../../data/telegram_events.db'));
+const dbDir = path.join(__dirname, '../../data');
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const db = new sqlite3.Database(path.join(dbDir, 'telegram_events.db'));
 
 db.serialize(() => {
-    // ── Seen messages (dedup by ID + content hash) ──────────────────────────
+    // ── Seen messages (dedup by ID + content hash + SimHash fingerprint) ──────
     db.run(`CREATE TABLE IF NOT EXISTS seen_messages (
         message_id   TEXT PRIMARY KEY,
         channel      TEXT,
         content_hash TEXT,
+        simhash      TEXT,
         posted_at    INTEGER
     )`);
-    // Upgrade path for old DBs — silently ignored if column already exists
+    // Upgrade paths for old DBs — silently ignored if columns already exist
     db.run(`ALTER TABLE seen_messages ADD COLUMN content_hash TEXT`, () => {});
+    db.run(`ALTER TABLE seen_messages ADD COLUMN simhash TEXT`,      () => {});
     db.run(`CREATE INDEX IF NOT EXISTS idx_content_hash ON seen_messages (content_hash)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_simhash      ON seen_messages (simhash)`);
 
     // ── Telegram channel list (replaces config.telegramChannels array) ───────
     db.run(`CREATE TABLE IF NOT EXISTS telegram_channels (
@@ -24,17 +33,22 @@ db.serialize(() => {
     )`);
     db.run(`ALTER TABLE telegram_channels ADD COLUMN channel_name TEXT`, () => {});
 
-    // ── Telegram events (stores event info for discord buttons) ─────────────
+    // ── Telegram events (stores event info for discord buttons + title dedup) ─
     db.run(`CREATE TABLE IF NOT EXISTS telegram_events (
         thread_id        TEXT PRIMARY KEY,
         title            TEXT,
         benefits         TEXT,
         registration_url TEXT,
         event_end_date   TEXT,
+        title_hash       TEXT,
+        posted_at        INTEGER,
         closed           INTEGER DEFAULT 0
     )`);
-    db.run(`ALTER TABLE telegram_events ADD COLUMN event_end_date TEXT`, () => {});
-    db.run(`ALTER TABLE telegram_events ADD COLUMN closed INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN event_end_date TEXT`,        () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN closed INTEGER DEFAULT 0`,    () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN title_hash TEXT`,             () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN posted_at INTEGER`,           () => {});
+    db.run(`CREATE INDEX IF NOT EXISTS idx_title_hash ON telegram_events (title_hash)`);
 
     // ── Telegram blacklist ──────────────────────────────────────────────────
     db.run(`CREATE TABLE IF NOT EXISTS telegram_blacklist (

@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -20,8 +20,9 @@ function addInlineCitations(response) {
         const citationLinks = support.groundingChunkIndices
             .map(i => {
                 const uri = chunks[i]?.web?.uri;
+                if (!uri) return null;
                 const title = chunks[i]?.web?.title || `${i + 1}`;
-                if (uri && (uri.includes('utm.my') || uri.includes('utm.gitbook.io'))) {
+                if (uri.includes('utm.my') || uri.includes('utm.gitbook.io')) {
                     return `[${title}](${uri})`;
                 }
                 return `[${i + 1}](${uri})`;
@@ -37,7 +38,7 @@ function addInlineCitations(response) {
     return text;
 }
 
-export async function getGeminiResponse(prompt) {
+async function getGeminiResponse(prompt) {
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
@@ -100,3 +101,5 @@ Before answering any question, search ONLY the two allowed domains:
         return `⚠️  # Error\n${message}`;
     }
 }
+
+module.exports = { getGeminiResponse };
