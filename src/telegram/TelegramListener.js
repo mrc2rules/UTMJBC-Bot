@@ -7,6 +7,9 @@ const state              = require('../shared/state');
 const { logInfo, logWarn, logError } = require('./logger');
 const { runScrape, autoClosePastEvents } = require('./Scraper');
 
+// Holds the cron task so /scrape stop can cancel it
+let scrapeCronTask = null;
+
 // ─── Entry Point ──────────────────────────────────────────────────────────────
 
 async function start(discordClient) {
@@ -38,19 +41,49 @@ async function start(discordClient) {
     logInfo('[TelegramListener] Connected to Telegram!');
     logInfo('[TelegramListener] Save this session string to config.telegramSession:\n' + telegramClient.session.save());
 
-    // ── Scrape schedule ──────────────────────────────────────────────────────
-    const intervalHours = config.telegramScrapeIntervalHours || 6;
-    const cronExpr      = `0 */${intervalHours} * * *`;
-
-    await runScrape(discordClient);
-    cron.schedule(cronExpr, () => runScrape(discordClient));
-    logInfo(`[TelegramListener] Scrape scheduled every ${intervalHours} hours.`);
-
-    // ── Auto-close schedule ──────────────────────────────────────────────────
+    // ── Auto-close schedule (still runs automatically) ──────────────────────
     cron.schedule('0 0 * * *', () => autoClosePastEvents(discordClient));
     autoClosePastEvents(discordClient).catch(err =>
         logError(`[AutoClose] Error on startup: ${err.message}`)
     );
+
+    logInfo('[TelegramListener] Ready. Use /scrape to start a scrape cycle.');
 }
 
-module.exports = { start, runScrape };
+/**
+ * Starts the periodic cron scrape schedule.
+ * Called by /scrape start (or /scrape with no action).
+ */
+function startScrapeCron(discordClient) {
+    if (scrapeCronTask) {
+        logWarn('[TelegramListener] Scrape cron is already running.');
+        return false;
+    }
+    const intervalHours = config.telegramScrapeIntervalHours || 6;
+    const cronExpr      = `0 */${intervalHours} * * *`;
+    scrapeCronTask = cron.schedule(cronExpr, () => runScrape(discordClient));
+    logInfo(`[TelegramListener] Scrape cron started — running every ${intervalHours} hours.`);
+    return true;
+}
+
+/**
+ * Stops the periodic cron scrape schedule.
+ * Called by /scrape stop.
+ */
+function stopScrapeCron() {
+    if (!scrapeCronTask) {
+        logWarn('[TelegramListener] No scrape cron is currently running.');
+        return false;
+    }
+    scrapeCronTask.stop();
+    scrapeCronTask = null;
+    logInfo('[TelegramListener] Scrape cron stopped.');
+    return true;
+}
+
+/** Returns true if the periodic cron is currently active. */
+function isScrapeCronActive() {
+    return scrapeCronTask !== null;
+}
+
+module.exports = { start, runScrape, startScrapeCron, stopScrapeCron, isScrapeCronActive };
