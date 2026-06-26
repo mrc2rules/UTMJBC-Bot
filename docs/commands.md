@@ -139,7 +139,7 @@ The **EmailBot role must be higher** in the role hierarchy than both the verifie
 
 > `Can't find roles. Please contact the admin!`
 
-![Role Hierarchy Example](https://raw.githubusercontent.com/lkaesberg/EmailBot/main/images/bothierarchy.png)
+![Role Hierarchy Example](https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/bothierarchy.png)
 
 ### Unverified Role Usage
 
@@ -159,3 +159,18 @@ Accepted domains:
 ```
 
 This helps users understand what access they'll get before verifying.
+
+---
+
+### 📡 Telegram Scraper Configuration
+
+Manage automated event scraping from campus Telegram channels into Discord threads.
+
+| Command | Description |
+|---------|-------------|
+| `/scrape [action]` | Control the event scraper. `run` triggers an immediate manual scrape; `start` enables periodic background scraping (cron); `stop` halts the cron schedule |
+| `/addchannel <channel_id>` | Add a Telegram channel (username or `-100...` numeric ID) to monitor for events |
+| `/removechannel <channel_id>` | Stop monitoring a tracked Telegram channel |
+| `/listchannels` | View all currently monitored Telegram channels |
+| `/tgblacklist <action> [keyword]` | Add, remove, or list banned keywords. Messages containing blacklisted terms are silently ignored |
+

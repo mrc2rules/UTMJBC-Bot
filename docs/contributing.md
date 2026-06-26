@@ -2,7 +2,8 @@
 
 #### Developer
 
-- Lars Kaesberg
+- UTM Johor Bahru Community (mrc2rules)
+- Lars Kaesberg (Original Upstream Creator)
 
 #### Translation
 
@@ -12,4 +13,4 @@
 - Norma1Name (Hebrew)
 - iplayagain (Korean)
 
-To add more languages please create an issue with the translation file. [Template](https://github.com/lkaesberg/EmailBot/blob/main/language/english.json)
+To add more languages please create an issue or pull request. [Template](https://github.com/mrc2rules/UTMJBC-Bot/blob/main/language/english.json)

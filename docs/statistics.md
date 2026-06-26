@@ -1,7 +1,7 @@
-<meta name="description" content="EmailVerify Discord Bot Statistics - Track verified users, emails sent, and server growth over time.">
-<meta name="keywords" content="EmailVerify Discord Bot Statistics Analytics">
+<meta name="description" content="UTMJBC Bot Statistics - Track verified users, emails sent, and community growth over time.">
+<meta name="keywords" content="UTMJBC Bot Statistics Analytics UTM Discord">
 
-# Statistics
+# UTMJBC Bot Statistics
 
 <style>
 :root {
@@ -301,7 +301,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const API_BASE = 'https://emailbotstats.larskaesberg.de';
+const API_BASE = 'https://services-jbcemail.alwaysdata.net';
 
 const baseOptions = {
     responsive: true,

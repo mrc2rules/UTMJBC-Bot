@@ -52,9 +52,9 @@ These terms can be updated at any time by the owner of the bot. Continued use of
 
 ### Contact
 
-Discord Server: [Official Support Discord](https://discord.com/invite/fEBSHUQXu2)
+Discord Server: [Official UTM JBC Discord](https://discord.gg/vuGTVyFgck)
 
-Email: <a href="mailto:emailbot@larskaesberg.de">Send Email</a>
+Email: <a href="mailto:admin@rahbab.com">Send Email</a>
 
 ---
 
@@ -66,7 +66,7 @@ This Privacy Policy explains how the EmailBot collects, uses, and protects your 
 
 ### Data Controller
 
-The data controller responsible for your information is the creator of EmailBot, reachable at [emailbot@larskaesberg.de](mailto:emailbot@larskaesberg.de).
+The data controller responsible for your information is the administrator of UTMJBC Bot, reachable at [admin@rahbab.com](mailto:admin@rahbab.com).
 
 ### Legal Basis for Processing
 
@@ -174,5 +174,5 @@ We may update this Privacy Policy from time to time. Changes will be indicated b
 
 For any privacy-related questions or concerns, please contact:
 
-- Discord Server: [Official Support Discord](https://discord.com/invite/fEBSHUQXu2)
-- Email: <a href="mailto:larskaesberg@gmail.com">larskaesberg@gmail.com</a>
+- Discord Server: [Official UTM JBC Discord](https://discord.gg/vuGTVyFgck)
+- Email: <a href="mailto:admin@rahbab.com">admin@rahbab.com</a>

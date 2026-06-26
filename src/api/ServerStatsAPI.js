@@ -6,7 +6,7 @@ const fs = require("fs");
 class ServerStatsAPI {
     constructor(bot, startServer = true) {
         this.app = express();
-        this.port = 8181;
+        this.port = process.env.PORT || 8181;
         this.bot = bot
         this.started = false;
         this.historyFileName = "config/ServerStatsHistory.log"
@@ -32,8 +32,8 @@ class ServerStatsAPI {
     registerEndpoints() {
         this.app.use(cors({
             origin: [
-                "https://emailbot.larskaesberg.de",
-                "https://EmailBot.srtf.dev",
+                "https://jbcbot.rahbab.com",
+                "https://services-jbcemail.alwaysdata.net",
                 "http://localhost:8000"
             ]
         }));

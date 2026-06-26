@@ -1,17 +1,17 @@
-<meta name="description" content= "This Discord Bot allows you to verify Discord users with the help of their email address. This can be useful when there is some sensitive data on the server that shouldn't be accessed by everyone.">
-<meta name="keywords" content="EmailVerify Discord Bot Lars Kaesberg Email Verify EmailBot managment">
-<meta name="author" content="Lars Kaesberg">
+<meta name="description" content="UTMJBC Bot - Email verification and AI event scraper for UTM Johor Bahru Community Discord server.">
+<meta name="keywords" content="UTMJBC Bot Email Verify UTM Discord Event Scraper">
+<meta name="author" content="UTM JBC">
 
-# EmailVerify
+# UTMJBC Bot
 
 ## Built With
 
 <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 24px; margin: 20px 0;">
-<a href="https://discord.com/"><img src="https://raw.githubusercontent.com/lkaesberg/EmailBot/main/images/discord.png" alt="Discord" style="height: 56px; width: auto;" title="Discord"></a>
-<a href="https://nodejs.org/"><img src="https://raw.githubusercontent.com/lkaesberg/EmailBot/main/images/node.png" alt="Node.js" style="height: 56px; width: auto;" title="Node.js"></a>
-<a href="https://www.npmjs.com/"><img src="https://raw.githubusercontent.com/lkaesberg/EmailBot/main/images/npm.png" alt="npm" style="height: 40px; width: auto;" title="npm"></a>
-<a href="https://discord.js.org/"><img src="https://raw.githubusercontent.com/lkaesberg/EmailBot/main/images/djs.png" alt="Discord.js" style="height: 56px; width: auto;" title="Discord.js"></a>
-<a href="https://nodemailer.com/"><img src="https://raw.githubusercontent.com/lkaesberg/EmailBot/main/images/nodemailer.webp" alt="Nodemailer" style="height: 48px; width: auto;" title="Nodemailer"></a>
+<a href="https://discord.com/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/discord.png" alt="Discord" style="height: 56px; width: auto;" title="Discord"></a>
+<a href="https://nodejs.org/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/node.png" alt="Node.js" style="height: 56px; width: auto;" title="Node.js"></a>
+<a href="https://www.npmjs.com/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/npm.png" alt="npm" style="height: 40px; width: auto;" title="npm"></a>
+<a href="https://discord.js.org/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/djs.png" alt="Discord.js" style="height: 56px; width: auto;" title="Discord.js"></a>
+<a href="https://nodemailer.com/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/nodemailer.webp" alt="Nodemailer" style="height: 48px; width: auto;" title="Nodemailer"></a>
 </div>
 
 ## Statistics
@@ -24,21 +24,19 @@ Emails sent: <strong id="emailsToday">0</strong> today / <strong id="emailsAll">
 
 ## Description
 
-This bot is able to verify that a discord user owns an email with a certain domain (i.e. verify name@uni.edu mails).
-This can be useful when there is some sensitive data on the server which shouldn't be accessed by everyone. To verify,
-the user just has to add a reaction to a specified message and the bot will send a direct message which asks for the
-email address. A code will be sent to the email which will grant the verified role when send to the bot.
+UTMJBC Bot is a multi-purpose Discord bot tailored for the Universiti Teknologi Malaysia (UTM) community. It provides:
+1. **Email Verification**: Verifies student and staff domain ownership (`@graduate.utm.my`, `@utm.my`) with automatic domain-specific role assignments.
+2. **AI Event Scraper**: Automatically monitors campus Telegram channels, extracts structured event details using Gemini AI, normalises titles, filters out duplicates, and publishes rich event cards directly to Discord forum threads.
 
 ## Usage
 
-### Invite Bot
+### Join Discord
 
-[Click here](https://discord.com/api/oauth2/authorize?client_id=895056197789564969&permissions=268504128&scope=bot%20applications.commands)
-to invite the bot to your server
+[Click here](https://discord.gg/vuGTVyFgck) to join the official UTM Johor Bahru Community Discord server.
 
-### Need Help
+### Need Help?
 
-[Click here](https://discord.com/invite/fEBSHUQXu2) to join the EmailBot Support Server
+For bug reports or feature requests, visit our [GitHub Repository](https://github.com/mrc2rules/UTMJBC-Bot).
 
 <script>
 const serverCount = document.getElementById("serverCount");
@@ -48,7 +46,7 @@ const emailsToday = document.getElementById("emailsToday");
 const emailsAll = document.getElementById("emailsAll");
 
 function refreshData(){
-  fetch('https://emailbotstats.larskaesberg.de/stats/current')
+  fetch('https://services-jbcemail.alwaysdata.net/stats/current')
     .then(response => response.json())
     .then(data => {
       serverCount.textContent = data.serverCount;

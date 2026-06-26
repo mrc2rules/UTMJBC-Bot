@@ -1,5 +1,5 @@
-<meta name="description" content="Status page for EmailVerify services including the mail server and bot API.">
-<meta name="keywords" content="EmailVerify Status Services Health Check">
+<meta name="description" content="Status page for UTMJBC Bot services including the mail verification server and bot API.">
+<meta name="keywords" content="UTMJBC Bot Status Services Health Check UTM">
 
 # Service Status
 
@@ -79,10 +79,10 @@
   <div class="status-card">
     <h3>
       <span id="api-indicator" class="status-indicator checking"></span>
-      EmailBot API
+      UTMJBC API
     </h3>
     <div id="api-status" class="status-text">Checking...</div>
-    <div class="status-url">https://emailbotstats.larskaesberg.de</div>
+    <div class="status-url">https://services-jbcemail.alwaysdata.net</div>
   </div>
 
   <div class="status-card">
@@ -91,7 +91,7 @@
       Mail Server
     </h3>
     <div id="mail-status" class="status-text">Checking...</div>
-    <div class="status-url">mail.larskaesberg.de</div>
+    <div class="status-url">services-jbcemail.alwaysdata.net</div>
   </div>
 
   <div class="status-card">
@@ -110,13 +110,13 @@
 
 | Service | Description | Endpoint |
 |---------|-------------|----------|
-| EmailBot API | Provides statistics and bot functionality | `emailbotstats.larskaesberg.de` |
-| Mail Server | SMTP server for sending verification emails | `mail.larskaesberg.de` |
+| UTMJBC API | Provides statistics and event scraper functionality | `services-jbcemail.alwaysdata.net` |
+| Mail Server | SMTP server for sending verification emails | `services-jbcemail.alwaysdata.net` |
 | Email Delivery | Monitors email send/verification ratio | - |
 
 ## Need Help?
 
-If you're experiencing issues with the bot, please join our [Support Server](https://discord.com/invite/fEBSHUQXu2).
+If you're experiencing issues with the bot, please join our [Community Discord](https://discord.gg/vuGTVyFgck).
 
 <script>
 const apiIndicator = document.getElementById('api-indicator');
@@ -137,7 +137,7 @@ function updateLastChecked() {
 
 async function checkApiStatus() {
   try {
-    const response = await fetch('https://emailbotstats.larskaesberg.de/stats/current', {
+    const response = await fetch('https://services-jbcemail.alwaysdata.net/stats/current', {
       method: 'GET',
       mode: 'cors'
     });
@@ -160,8 +160,8 @@ async function checkApiStatus() {
 
 async function checkMailStatus() {
   try {
-    // Check mail server via HTTPS (if webmail is available)
-    const response = await fetch('https://mail.larskaesberg.de', {
+    // Check service via HTTPS
+    const response = await fetch('https://services-jbcemail.alwaysdata.net', {
       method: 'HEAD',
       mode: 'no-cors'
     });

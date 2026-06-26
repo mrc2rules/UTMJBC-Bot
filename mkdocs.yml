@@ -1,11 +1,11 @@
-site_name: EmailVerify for Discord
-repo_url: https://github.com/lkaesberg/EmailVerify
+site_name: UTMJBC Bot
+repo_url: https://github.com/mrc2rules/UTMJBC-Bot
 theme:
   name: material
   icon:
     repo: fontawesome/brands/github
-  logo: https://raw.githubusercontent.com/lkaesberg/EmailBot/main/images/emailbot-border.png
-  favicon: https://raw.githubusercontent.com/lkaesberg/EmailBot/main/images/emailbot.png
+  logo: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/emailbot-border.png
+  favicon: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/emailbot.png
   palette:
     scheme: default
     primary: black
@@ -19,4 +19,3 @@ nav:
   - 'status.md'
   - 'contributing.md'
   - 'legal.md'
-  - Buy Me a Coffee❤️: https://buymeacoffee.com/sral12486
