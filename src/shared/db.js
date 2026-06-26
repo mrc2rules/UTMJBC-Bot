@@ -5,6 +5,8 @@ const fs = require('fs');
 let config = {};
 try { config = require('../../config/config.json'); } catch {}
 
+const legacyDbPath = path.join(__dirname, '../../data/telegram_events.db');
+
 // Use an explicit persistent path from config if set (recommended for hosted environments
 // where the app directory may be recreated on deploy). Falls back to the local data/ folder.
 const dbDir = config.dbPath
@@ -15,8 +17,16 @@ if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new sqlite3.Database(path.join(dbDir, 'telegram_events.db'));
-console.log(`[Database] Using database at: ${path.join(dbDir, 'telegram_events.db')}`);
+const targetDbPath = path.join(dbDir, 'telegram_events.db');
+
+// Auto-copy existing legacy database to persistent path on first run
+if (targetDbPath !== legacyDbPath && !fs.existsSync(targetDbPath) && fs.existsSync(legacyDbPath)) {
+    console.log(`[Database] Copying existing telegram_events.db from legacy path to persistent location...`);
+    fs.copyFileSync(legacyDbPath, targetDbPath);
+}
+
+const db = new sqlite3.Database(targetDbPath);
+console.log(`[Database] Using database at: ${targetDbPath}`);
 
 db.serialize(() => {
     // ── Seen messages (dedup by ID + content hash + SimHash fingerprint) ──────

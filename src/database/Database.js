@@ -8,16 +8,24 @@ const fs = require('fs')
 let config = {};
 try { config = require('../../config/config.json'); } catch {}
 
+const legacyDbPath = path.join(__dirname, '../../config/bot.db');
+
 // Use an explicit persistent path from config if set (recommended for hosted environments
 // where the app directory may be recreated on deploy). Falls back to config/bot.db.
 const botDbPath = config.botDbPath
     ? path.join(path.resolve(config.botDbPath), 'bot.db')
-    : path.join(__dirname, '../../config/bot.db');
+    : legacyDbPath;
 
 // Ensure the directory exists
 const botDbDir = path.dirname(botDbPath);
 if (!fs.existsSync(botDbDir)) {
     fs.mkdirSync(botDbDir, { recursive: true });
+}
+
+// Auto-copy existing legacy database to persistent path on first run
+if (botDbPath !== legacyDbPath && !fs.existsSync(botDbPath) && fs.existsSync(legacyDbPath)) {
+    console.log(`[Database] Copying existing bot.db from legacy path to persistent location...`);
+    fs.copyFileSync(legacyDbPath, botDbPath);
 }
 
 console.log(`[Database] Using database at: ${botDbPath}`);
