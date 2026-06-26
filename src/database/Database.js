@@ -2,10 +2,30 @@ const ServerSettings = require('./ServerSettings.js')
 const EmailUser = require("./EmailUser");
 const sqlite3 = require('sqlite3').verbose()
 const md5hash = require("../crypto/Crypto")
+const path = require('path')
+const fs = require('fs')
+
+let config = {};
+try { config = require('../../config/config.json'); } catch {}
+
+// Use an explicit persistent path from config if set (recommended for hosted environments
+// where the app directory may be recreated on deploy). Falls back to config/bot.db.
+const botDbPath = config.botDbPath
+    ? path.join(path.resolve(config.botDbPath), 'bot.db')
+    : path.join(__dirname, '../../config/bot.db');
+
+// Ensure the directory exists
+const botDbDir = path.dirname(botDbPath);
+if (!fs.existsSync(botDbDir)) {
+    fs.mkdirSync(botDbDir, { recursive: true });
+}
+
+console.log(`[Database] Using database at: ${botDbPath}`);
 
 class Database {
     constructor() {
-        this.db = new sqlite3.Database('config/bot.db');
+        this.db = new sqlite3.Database(botDbPath);
+
 
         this.runMigration(1, () => {
             this.db.run("CREATE TABLE IF NOT EXISTS guilds(guildid INT PRIMARY KEY,domains TEXT, verifiedrole TEXT,unverifiedrole Text, channelid TEXT, messageid TEXT, language TEXT);")
