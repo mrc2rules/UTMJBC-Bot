@@ -2,12 +2,21 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dbDir = path.join(__dirname, '../../data');
+let config = {};
+try { config = require('../../config/config.json'); } catch {}
+
+// Use an explicit persistent path from config if set (recommended for hosted environments
+// where the app directory may be recreated on deploy). Falls back to the local data/ folder.
+const dbDir = config.dbPath
+    ? path.resolve(config.dbPath)
+    : path.join(__dirname, '../../data');
+
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
 }
 
 const db = new sqlite3.Database(path.join(dbDir, 'telegram_events.db'));
+console.log(`[Database] Using database at: ${path.join(dbDir, 'telegram_events.db')}`);
 
 db.serialize(() => {
     // ── Seen messages (dedup by ID + content hash + SimHash fingerprint) ──────
