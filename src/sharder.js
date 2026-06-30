@@ -16,7 +16,7 @@ manager.on('shardCreate', (shard) => {
 (async () => {
   try {
     await manager.spawn();
-    if (typeof topggToken !== 'undefined') {
+    if (topggToken && topggToken.trim() !== '') {
       const poster = AutoPoster(topggToken, manager);
       poster.on('error', () => {});
       console.log('Posting stats to topGG via manager!');
