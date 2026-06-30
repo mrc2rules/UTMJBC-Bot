@@ -161,7 +161,9 @@ async function registerAllGuilds(bot) {
 bot.once('ready', async () => {
     const isPrimary = !bot.shard || bot.shard.ids.includes(0)
     if (isPrimary) {
-	startTelegram(bot);
+	startTelegram(bot).catch(err => {
+	    console.error('[TelegramListener] Unexpected error during Telegram startup:', err);
+	});
         rl = readline.createInterface(stdin, stdout)
         rl.on("line", async command => {
             switch (command) {

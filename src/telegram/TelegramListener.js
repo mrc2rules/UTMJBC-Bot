@@ -24,30 +24,34 @@ async function start(discordClient) {
         connectionRetries: 5,
     });
 
-    await telegramClient.start({
-        phoneNumber: async () => config.telegramPhone,
-        password:    async () => config.telegramPassword || '',
-        phoneCode:   async () => {
-            logInfo('[TelegramListener] Enter the Telegram login code:');
-            return new Promise(resolve => process.stdin.once('data', d => resolve(d.toString().trim())));
-        },
-        onError: (err) => logError(`[TelegramListener] Auth error: ${err}`),
-    });
+    try {
+        await telegramClient.start({
+            phoneNumber: async () => config.telegramPhone,
+            password:    async () => config.telegramPassword || '',
+            phoneCode:   async () => {
+                logInfo('[TelegramListener] Enter the Telegram login code:');
+                return new Promise(resolve => process.stdin.once('data', d => resolve(d.toString().trim())));
+            },
+            onError: (err) => logError(`[TelegramListener] Auth error: ${err}`),
+        });
 
-    // Store the connected client in shared state so Scraper (and any command
-    // handlers) can access it without circular imports.
-    state.telegramClient = telegramClient;
+        // Store the connected client in shared state so Scraper (and any command
+        // handlers) can access it without circular imports.
+        state.telegramClient = telegramClient;
 
-    logInfo('[TelegramListener] Connected to Telegram!');
-    logInfo('[TelegramListener] Save this session string to config.telegramSession:\n' + telegramClient.session.save());
+        logInfo('[TelegramListener] Connected to Telegram!');
+        logInfo('[TelegramListener] Save this session string to config.telegramSession:\n' + telegramClient.session.save());
 
-    // ── Auto-close schedule (still runs automatically) ──────────────────────
-    cron.schedule('0 0 * * *', () => autoClosePastEvents(discordClient));
-    autoClosePastEvents(discordClient).catch(err =>
-        logError(`[AutoClose] Error on startup: ${err.message}`)
-    );
+        // ── Auto-close schedule (still runs automatically) ──────────────────────
+        cron.schedule('0 0 * * *', () => autoClosePastEvents(discordClient));
+        autoClosePastEvents(discordClient).catch(err =>
+            logError(`[AutoClose] Error on startup: ${err.message}`)
+        );
 
-    logInfo('[TelegramListener] Ready. Use /scrape to start a scrape cycle.');
+        logInfo('[TelegramListener] Ready. Use /scrape to start a scrape cycle.');
+    } catch (err) {
+        logError(`[TelegramListener] Failed to connect to Telegram: ${err.message || err}`);
+    }
 }
 
 /**
