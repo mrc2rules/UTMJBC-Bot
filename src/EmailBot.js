@@ -39,6 +39,14 @@ const bot = new Discord.Client({
 const serverStatsAPI = new ServerStatsAPI(bot, false)
 bot.serverStatsAPI = serverStatsAPI
 
+// Start the Express telemetry server immediately on the primary shard/process so the host (e.g. Alwaysdata) knows the port is bound
+const isPrimary = !bot.shard || bot.shard.ids.includes(0)
+if (isPrimary) {
+    serverStatsAPI.app.listen(serverStatsAPI.port, () => {
+        console.log(`Telemetry server listening on port ${serverStatsAPI.port}!`)
+    })
+}
+
 let emailNotify = true
 
 module.exports.userGuilds = userGuilds = new Map()
@@ -150,12 +158,9 @@ async function registerAllGuilds(bot) {
     console.log(`[Shard ${bot.shard?.ids ?? 'N/A'}] Finished registering commands for all guilds`);
 }
 
-bot.once('clientReady', async () => {
+bot.once('ready', async () => {
     const isPrimary = !bot.shard || bot.shard.ids.includes(0)
     if (isPrimary) {
-        serverStatsAPI.app.listen(serverStatsAPI.port, () => {
-            console.log(`App listening on port ${serverStatsAPI.port}!`)
-        })
 	startTelegram(bot);
         rl = readline.createInterface(stdin, stdout)
         rl.on("line", async command => {

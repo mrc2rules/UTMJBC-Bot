@@ -1,10 +1,10 @@
 const { ShardingManager } = require('discord.js');
 const path = require('path');
-const { token } = require('../config/config.json');
+const { token, totalShards } = require('../config/config.json');
 
 const manager = new ShardingManager(path.join(__dirname, 'EmailBot.js'), {
   token,
-  totalShards: 'auto',
+  totalShards: typeof totalShards === 'number' || totalShards === 'auto' ? totalShards : 1,
   respawn: true,
 });
 
