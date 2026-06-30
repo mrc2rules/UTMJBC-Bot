@@ -9,13 +9,19 @@ Internal module APIs. Intended for contributors and developers extending the bot
 
 ---
 
-## `src/telegram/MessageChecker.js`
+## :simple-telegram: 1. Telegram Scraper & AI Engine { data-toc-label="1. Telegram Scraper & AI Engine" }
+
+The Telegram scraper subsystem coordinates real-time event discovery, message deduplication, and structured AI event extraction.
+
+---
+
+### `src/telegram/MessageChecker.js`
 
 Stateless utilities for message deduplication and language detection. All database functions return Promises.
 
 ---
 
-### `detectMalay(text)`
+#### `detectMalay(text)`
 
 Returns `true` if `text` contains ≥ 4 unique Malay vocabulary keywords.
 
@@ -33,7 +39,7 @@ detectMalay('Join us for a hackathon!'); // → false
 
 ---
 
-### `hashMessageText(text)`
+#### `hashMessageText(text)`
 
 Normalises text (lowercase, collapse whitespace, strip punctuation) and returns its MD5 hex digest.
 
@@ -47,7 +53,7 @@ Used as a fast exact-duplicate guard before the SimHash computation.
 
 ---
 
-### `simHashText(text)`
+#### `simHashText(text)`
 
 Computes a 64-bit SimHash fingerprint using FNV-1a token hashing.
 
@@ -61,7 +67,7 @@ Two messages are considered near-duplicates if their Hamming distance is ≤ `SI
 
 ---
 
-### `normaliseTitleHash(title)`
+#### `normaliseTitleHash(title)`
 
 Normalises a Gemini-extracted event title and returns its MD5 hex digest.
 
@@ -75,7 +81,7 @@ Used for cross-channel same-event deduplication within a 14-day window.
 
 ---
 
-### `isEventPast(eventData)`
+#### `isEventPast(eventData)`
 
 Returns `true` if the event's end (or start) date is strictly before today's local date.
 
@@ -93,19 +99,19 @@ isEventPast({ eventEndDate: null });          // → false (no date, not skipped
 
 ---
 
-### `isAlreadySeen(messageId, channelId)` → `Promise<boolean>`
+#### `isAlreadySeen(messageId, channelId)` → `Promise<boolean>`
 
 Checks whether this message ID (from `channelId`) is already in the `seen_messages` table.
 
 ---
 
-### `isAlreadySeenByHash(hash)` → `Promise<boolean>`
+#### `isAlreadySeenByHash(hash)` → `Promise<boolean>`
 
 Checks whether a message with this content MD5 has already been processed.
 
 ---
 
-### `isNearDuplicate(simhash, threshold?)` → `Promise<boolean>`
+#### `isNearDuplicate(simhash, threshold?)` → `Promise<boolean>`
 
 Loads the last 500 SimHash fingerprints from the DB and returns `true` if any has a Hamming distance ≤ `threshold` (default: `SIMHASH_THRESHOLD = 5`).
 
@@ -116,13 +122,13 @@ Loads the last 500 SimHash fingerprints from the DB and returns `true` if any ha
 
 ---
 
-### `isTitleDuplicate(titleHash)` → `Promise<boolean>`
+#### `isTitleDuplicate(titleHash)` → `Promise<boolean>`
 
 Returns `true` if an event with this normalised title hash was posted in the last 14 days.
 
 ---
 
-### `markAsSeen(messageId, channelId, hash, simhash)` → `Promise<void>`
+#### `markAsSeen(messageId, channelId, hash, simhash)` → `Promise<void>`
 
 Inserts a row into `seen_messages`. Uses `INSERT OR IGNORE` so duplicate calls are safe.
 
@@ -135,13 +141,24 @@ Inserts a row into `seen_messages`. Uses `INSERT OR IGNORE` so duplicate calls a
 
 ---
 
-## `src/telegram/Scraper.js`
+### `src/telegram/Scraper.js`
 
 ---
 
-### `runScrape(discordClient, options?)` → `Promise<object>`
+#### `runScrape(discordClient, options?)` → `Promise<object>`
 
 Runs a full scrape cycle across all (or a specific) tracked Telegram channel(s).
+
+```mermaid
+flowchart TD
+    start["runScrape(discordClient)"] --> fetch["Fetch Messages from Tracked Channels"]
+    fetch --> check["MessageChecker: Check Deduplication Gates"]
+    check -->|Duplicate / Seen| skip["Skip Message"]
+    check -->|New Candidate| gemini["GeminiAnalyser: analyseWithGemini()"]
+    gemini -->|Not Event / Error| mark["markAsSeen()"]
+    gemini -->|Valid Event| pub["DiscordPublisher: postToDiscord()"]
+    pub --> record["Save Thread ID & markAsSeen()"]
+```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -159,7 +176,7 @@ const result = await runScrape(discordClient, { force: true, targetChannelId: '-
 
 ---
 
-### `autoClosePastEvents(discordClient)` → `Promise<number>`
+#### `autoClosePastEvents(discordClient)` → `Promise<number>`
 
 Locks and archives Discord forum threads for events whose `event_end_date` has passed. Also prunes `seen_messages` rows older than 30 days.
 
@@ -167,11 +184,11 @@ Locks and archives Discord forum threads for events whose `event_end_date` has p
 
 ---
 
-## `src/telegram/GeminiAnalyser.js`
+### `src/telegram/GeminiAnalyser.js`
 
 ---
 
-### `analyseWithGemini(text)` → `Promise<object>`
+#### `analyseWithGemini(text)` → `Promise<object>`
 
 Sends `text` to the Gemini 2.5 Flash REST API and returns structured event data.
 
@@ -217,11 +234,11 @@ Sends `text` to the Gemini 2.5 Flash REST API and returns structured event data.
 
 ---
 
-## `src/telegram/DiscordPublisher.js`
+### `src/telegram/DiscordPublisher.js`
 
 ---
 
-### `postToDiscord(discordChannel, eventData, channelUsername, originalText, titleHash)` → `Promise<void>`
+#### `postToDiscord(discordChannel, eventData, channelUsername, originalText, titleHash)` → `Promise<void>`
 
 Builds a Discord embed from Gemini event data and creates a forum thread. Persists the thread to the `telegram_events` table.
 
@@ -242,7 +259,7 @@ The function automatically:
 
 ---
 
-## `src/telegram/ChannelManager.js`
+### `src/telegram/ChannelManager.js`
 
 All functions return Promises.
 
@@ -258,7 +275,7 @@ All functions return Promises.
 
 ---
 
-## `src/telegram/KeywordBlacklistManager.js`
+### `src/telegram/KeywordBlacklistManager.js`
 
 All functions return Promises.
 
@@ -271,39 +288,45 @@ All functions return Promises.
 
 ---
 
-## `src/telegram/TelegramListener.js`
+### `src/telegram/TelegramListener.js`
 
 ---
 
-### `start(discordClient)` → `Promise<void>`
+#### `start(discordClient)` → `Promise<void>`
 
 Connects to the Telegram MTProto API. Prompts for a login code on first run if `telegramSession` is empty. Stores the authenticated client in `state.telegramClient`. Schedules the nightly auto-close cron.
 
 ---
 
-### `startScrapeCron(discordClient)` → `boolean`
+#### `startScrapeCron(discordClient)` → `boolean`
 
 Starts the periodic scrape cron at the configured interval. Returns `false` if the cron is already running.
 
 ---
 
-### `stopScrapeCron()` → `boolean`
+#### `stopScrapeCron()` → `boolean`
 
 Stops the periodic cron. Returns `false` if no cron is active.
 
 ---
 
-### `isScrapeCronActive()` → `boolean`
+#### `isScrapeCronActive()` → `boolean`
 
 Returns `true` if the periodic cron is currently scheduled.
 
 ---
 
-## `src/utils/wildcardMatch.js`
+## :material-wrench: 2. Utilities & Localization { data-toc-label="2. Utilities & Localization" }
+
+General-purpose helper modules handling string wildcards, error reporting, Discord embed builders, and multi-language support.
 
 ---
 
-### `emailMatchesDomains(email, domainPatterns)` → `boolean`
+### `src/utils/wildcardMatch.js`
+
+---
+
+#### `emailMatchesDomains(email, domainPatterns)` → `boolean`
 
 Returns `true` if `email` matches **any** pattern in `domainPatterns`. Matching is anchored to the end of the address (domain part).
 
@@ -314,7 +337,7 @@ emailMatchesDomains('user@gmail.com',        ['@*.utm.my']); // → false
 
 ---
 
-### `emailIsBlacklisted(email, blacklistPatterns)` → `boolean`
+#### `emailIsBlacklisted(email, blacklistPatterns)` → `boolean`
 
 Returns `true` if `email` matches any blacklist pattern. Patterns match anywhere in the address.
 
@@ -324,13 +347,13 @@ emailIsBlacklisted('spam@tempmail.com', ['*@tempmail.*']); // → true
 
 ---
 
-### `getMatchingDomainPatterns(email, domainPatterns)` → `string[]`
+#### `getMatchingDomainPatterns(email, domainPatterns)` → `string[]`
 
 Returns **all** patterns from `domainPatterns` that match `email`. Used for domain-specific role resolution (a user may match multiple patterns and receive roles for all of them).
 
 ---
 
-### `wildcardToRegex(pattern, options?)` → `RegExp`
+#### `wildcardToRegex(pattern, options?)` → `RegExp`
 
 Converts a wildcard string (using `*`) to a compiled `RegExp`.
 
@@ -341,11 +364,11 @@ Converts a wildcard string (using `*`) to a compiled `RegExp`.
 
 ---
 
-## `src/utils/ErrorNotifier.js`
+### `src/utils/ErrorNotifier.js`
 
 ---
 
-### `ErrorNotifier.notify(options)` → `Promise<boolean>`
+#### `ErrorNotifier.notify(options)` → `Promise<boolean>`
 
 Sends an admin error notification to the guild's configured destination (owner DM, user DM, or channel). Falls back to the guild owner if the primary target fails.
 
@@ -362,7 +385,7 @@ Sends an admin error notification to the guild's configured destination (owner D
 
 ---
 
-## `src/utils/embeds.js`
+### `src/utils/embeds.js`
 
 Factory functions that return `Discord.EmbedBuilder` instances.
 
@@ -378,11 +401,11 @@ Factory functions that return `Discord.EmbedBuilder` instances.
 
 ---
 
-## `src/Language.js`
+### `src/Language.js`
 
 ---
 
-### `getLocale(language, key, ...vars)` → `string`
+#### `getLocale(language, key, ...vars)` → `string`
 
 Retrieves a localised string, substituting each `%VAR%` placeholder with the corresponding argument in `vars`. Falls back to `'english'` if the key is missing in the requested language.
 
@@ -394,11 +417,11 @@ getLocale('english', 'mailTimeoutDescription', '30');
 
 ---
 
-## `src/gemini/getGeminiResponse.js`
+### `src/gemini/getGeminiResponse.js`
 
 ---
 
-### `getGeminiResponse(prompt)` → `Promise<string>`
+#### `getGeminiResponse(prompt)` → `Promise<string>`
 
 Calls Gemini 2.5 Flash with Google Search grounding restricted to `utm.my` and `utm.gitbook.io`. Inline citations are injected into the response text. Used by the `/askai` command.
 
@@ -412,7 +435,13 @@ Calls Gemini 2.5 Flash with Google Search grounding restricted to `utm.my` and `
 
 ---
 
-## `src/database/Database.js`
+## :material-database: 3. Core Verification & Database Engine { data-toc-label="3. Core Verification & Database Engine" }
+
+Singleton database interfaces and domain models powering the identity verification pipeline.
+
+---
+
+### `src/database/Database.js`
 
 Singleton exported as `module.exports` (not a class constructor call from the consumer). All callback-based methods pass the result as the sole argument.
 
@@ -429,7 +458,7 @@ Singleton exported as `module.exports` (not a class constructor call from the co
 | `incrementVerifications(guildId)` | `(string)` | Increment the total and monthly verification counters. |
 | `getAllGuildStats()` | `→ Promise<object[]>` | Return all rows from `guild_stats`. |
 
-### `ServerSettings` properties
+#### `ServerSettings` properties
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|

@@ -196,15 +196,19 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
 
         db.run(
             `INSERT INTO telegram_events
-                 (thread_id, title, registration_url, event_end_date, title_hash, posted_at, closed)
-             VALUES (?, ?, ?, ?, ?, ?, 0)`,
+                  (thread_id, title, registration_url, event_end_date, title_hash, posted_at, closed, event_type, topic, cost, merit)
+              VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
             [
                 thread.id,
                 rawTitle,
                 eventData.registrationUrl || null,
                 eventData.eventEndDate    || null,
                 titleHash                 || null,
-                Date.now()
+                Date.now(),
+                eventData.type            || null,
+                eventData.topic           || null,
+                eventData.cost            || null,
+                eventData.merit ? 1 : 0
             ]
         );
     } catch (err) {

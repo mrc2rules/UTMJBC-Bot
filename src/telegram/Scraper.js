@@ -166,10 +166,32 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
             `gemini=${sentToGemini} events=${eventsFound}`
         );
 
-        return { eventsFound, sentToGemini };
+        return {
+            total,
+            skippedShort,
+            skippedBlacklisted,
+            skippedSeen,
+            skippedDupe,
+            skippedNearDupe,
+            skippedPast,
+            skippedTitleDupe,
+            sentToGemini,
+            eventsFound
+        };
     } catch (err) {
         logError(`[Scraper] Error scraping ${channelId}: ${err.message}`);
-        return { eventsFound: 0, sentToGemini: 0 };
+        return {
+            total: 0,
+            skippedShort: 0,
+            skippedBlacklisted: 0,
+            skippedSeen: 0,
+            skippedDupe: 0,
+            skippedNearDupe: 0,
+            skippedPast: 0,
+            skippedTitleDupe: 0,
+            sentToGemini: 0,
+            eventsFound: 0
+        };
     }
 }
 
@@ -291,19 +313,38 @@ async function runScrape(discordClient, options = {}) {
         channelsToScrape = channelsToScrape.filter(ch => ch.channel_id === options.targetChannelId);
     }
 
-    let totalEvents = 0, totalGemini = 0;
+    let totalStats = {
+        total: 0,
+        skippedShort: 0,
+        skippedBlacklisted: 0,
+        skippedSeen: 0,
+        skippedDupe: 0,
+        skippedNearDupe: 0,
+        skippedPast: 0,
+        skippedTitleDupe: 0,
+        sentToGemini: 0,
+        eventsFound: 0
+    };
 
     for (const ch of channelsToScrape) {
         if (state.cancelScrape) break;
-        const { eventsFound, sentToGemini } = await scrapeChannel(
+        const stats = await scrapeChannel(
             discordChannel,
             ch.channel_id,
             options.force,
             ch.channel_name,
             blacklist
         );
-        totalEvents += eventsFound;
-        totalGemini += sentToGemini;
+        totalStats.total += stats.total || 0;
+        totalStats.skippedShort += stats.skippedShort || 0;
+        totalStats.skippedBlacklisted += stats.skippedBlacklisted || 0;
+        totalStats.skippedSeen += stats.skippedSeen || 0;
+        totalStats.skippedDupe += stats.skippedDupe || 0;
+        totalStats.skippedNearDupe += stats.skippedNearDupe || 0;
+        totalStats.skippedPast += stats.skippedPast || 0;
+        totalStats.skippedTitleDupe += stats.skippedTitleDupe || 0;
+        totalStats.sentToGemini += stats.sentToGemini || 0;
+        totalStats.eventsFound += stats.eventsFound || 0;
     }
 
     const wasCancelled = state.cancelScrape;
@@ -315,9 +356,38 @@ async function runScrape(discordClient, options = {}) {
         return { cancelled: true };
     }
 
+    // Save aggregated daily stats to database
+    const today = new Date().toISOString().split('T')[0];
+    db.run(`
+        INSERT INTO scraper_daily_stats (
+            date, messages_scraped, skipped_short, skipped_blacklist,
+            skipped_seen, skipped_exact_duplicate, skipped_near_duplicate,
+            skipped_past, skipped_title_duplicate, sent_to_gemini, events_found
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(date) DO UPDATE SET
+            messages_scraped = messages_scraped + excluded.messages_scraped,
+            skipped_short = skipped_short + excluded.skipped_short,
+            skipped_blacklist = skipped_blacklist + excluded.skipped_blacklist,
+            skipped_seen = skipped_seen + excluded.skipped_seen,
+            skipped_exact_duplicate = skipped_exact_duplicate + excluded.skipped_exact_duplicate,
+            skipped_near_duplicate = skipped_near_duplicate + excluded.skipped_near_duplicate,
+            skipped_past = skipped_past + excluded.skipped_past,
+            skipped_title_duplicate = skipped_title_duplicate + excluded.skipped_title_duplicate,
+            sent_to_gemini = sent_to_gemini + excluded.sent_to_gemini,
+            events_found = events_found + excluded.events_found
+    `, [
+        today, totalStats.total, totalStats.skippedShort, totalStats.skippedBlacklisted,
+        totalStats.skippedSeen, totalStats.skippedDupe, totalStats.skippedNearDupe,
+        totalStats.skippedPast, totalStats.skippedTitleDupe, totalStats.sentToGemini,
+        totalStats.eventsFound
+    ], (err) => {
+        if (err) logError(`[Scraper] Failed to save daily stats to DB: ${err.message}`);
+    });
+
     logInfo('[Scraper] Scrape cycle complete.');
 
-    return { channelsScraped: channelsToScrape.length, totalEvents, totalGemini };
+    return { channelsScraped: channelsToScrape.length, totalEvents: totalStats.eventsFound, totalGemini: totalStats.sentToGemini };
 }
 
 module.exports = { runScrape, autoClosePastEvents };

@@ -67,7 +67,26 @@ db.serialize(() => {
     db.run(`ALTER TABLE telegram_events ADD COLUMN closed INTEGER DEFAULT 0`,    () => {});
     db.run(`ALTER TABLE telegram_events ADD COLUMN title_hash TEXT`,             () => {});
     db.run(`ALTER TABLE telegram_events ADD COLUMN posted_at INTEGER`,           () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN event_type TEXT`,             () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN topic TEXT`,                  () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN cost TEXT`,                   () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN merit INTEGER DEFAULT 0`,     () => {});
     db.run(`CREATE INDEX IF NOT EXISTS idx_title_hash ON telegram_events (title_hash)`);
+
+    // ── Scraper daily stats (for deduplication and throughput metrics) ───────
+    db.run(`CREATE TABLE IF NOT EXISTS scraper_daily_stats (
+        date TEXT PRIMARY KEY,
+        messages_scraped INTEGER DEFAULT 0,
+        skipped_short INTEGER DEFAULT 0,
+        skipped_blacklist INTEGER DEFAULT 0,
+        skipped_seen INTEGER DEFAULT 0,
+        skipped_exact_duplicate INTEGER DEFAULT 0,
+        skipped_near_duplicate INTEGER DEFAULT 0,
+        skipped_past INTEGER DEFAULT 0,
+        skipped_title_duplicate INTEGER DEFAULT 0,
+        sent_to_gemini INTEGER DEFAULT 0,
+        events_found INTEGER DEFAULT 0
+    )`);
 
     // ── Telegram blacklist ──────────────────────────────────────────────────
     db.run(`CREATE TABLE IF NOT EXISTS telegram_blacklist (

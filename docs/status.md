@@ -134,14 +134,35 @@ async function checkServerStatus() {
   }
 }
 
+function formatUptime(ms) {
+  if (!ms) return '';
+  const seconds = Math.floor((ms / 1000) % 60);
+  const minutes = Math.floor((ms / (1000 * 60)) % 60);
+  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  
+  const parts = [];
+  if (days > 0) parts.push(days + 'd');
+  if (hours > 0) parts.push(hours + 'h');
+  if (minutes > 0) parts.push(minutes + 'm');
+  if (seconds > 0) parts.push(seconds + 's');
+  return parts.slice(0, 2).join(' ') || '0s';
+}
+
 function checkBotStatus() {
   if (!latestStats) {
     if (botIndicator) botIndicator.className = 'status-indicator offline';
     if (botStatus) botStatus.textContent = 'Unable to check - API unreachable';
     return;
   }
-  if (botIndicator) botIndicator.className = 'status-indicator online';
-  if (botStatus) botStatus.textContent = 'Operational - Connected to Discord';
+  if (latestStats.botStatus === 'online') {
+    if (botIndicator) botIndicator.className = 'status-indicator online';
+    const uptimeStr = formatUptime(latestStats.botUptime);
+    if (botStatus) botStatus.textContent = 'Operational' + (uptimeStr ? ' — Uptime: ' + uptimeStr : ' — Connected to Discord');
+  } else {
+    if (botIndicator) botIndicator.className = 'status-indicator offline';
+    if (botStatus) botStatus.textContent = 'Offline or disconnected from Discord';
+  }
 }
 
 async function checkGmailStatus() {

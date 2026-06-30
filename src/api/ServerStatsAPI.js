@@ -2,6 +2,7 @@ const ServerStats = require("../ServerStats");
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
+const db = require("../shared/db");
 
 class ServerStatsAPI {
     constructor(bot, startServer = true) {
@@ -67,7 +68,9 @@ class ServerStatsAPI {
                 mailsSendAll: this.serverStats.mailsSendAll,
                 usersVerifiedToday: this.serverStats.usersVerifiedToday,
                 usersVerifiedAll: this.serverStats.usersVerifiedAll,
-                serverCount: serverCount
+                serverCount: serverCount,
+                botStatus: this.bot && this.bot.ws && this.bot.ws.status === 0 ? 'online' : 'offline',
+                botUptime: this.bot ? this.bot.uptime : null
             })
         });
 
@@ -79,6 +82,126 @@ class ServerStatsAPI {
                 res.json(history)
             } catch (err) {
                 res.status(500).json({ error: 'Failed to read history' })
+            }
+        });
+
+        // Get Telegram Scraper aggregate stats
+        this.app.get('/stats/telegram', async (req, res) => {
+            try {
+                // Get all-time events count
+                const totalEventsAllTime = await new Promise((resolve, reject) => {
+                    db.get('SELECT COUNT(*) as count FROM telegram_events', [], (err, row) => {
+                        if (err) reject(err);
+                        else resolve(row ? row.count : 0);
+                    });
+                });
+
+                // Get events published today
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+                const totalEventsToday = await new Promise((resolve, reject) => {
+                    db.get('SELECT COUNT(*) as count FROM telegram_events WHERE posted_at >= ?', [startOfToday.getTime()], (err, row) => {
+                        if (err) reject(err);
+                        else resolve(row ? row.count : 0);
+                    });
+                });
+
+                // Group by category (event_type)
+                const categoryBreakdown = await new Promise((resolve, reject) => {
+                    db.all('SELECT event_type, COUNT(*) as count FROM telegram_events WHERE event_type IS NOT NULL GROUP BY event_type', [], (err, rows) => {
+                        if (err) reject(err);
+                        else {
+                            const map = {};
+                            rows.forEach(r => { map[r.event_type] = r.count; });
+                            resolve(map);
+                        }
+                    });
+                });
+
+                // Group by topic
+                const topicBreakdown = await new Promise((resolve, reject) => {
+                    db.all('SELECT topic, COUNT(*) as count FROM telegram_events WHERE topic IS NOT NULL GROUP BY topic', [], (err, rows) => {
+                        if (err) reject(err);
+                        else {
+                            const map = {};
+                            rows.forEach(r => { map[r.topic] = r.count; });
+                            resolve(map);
+                        }
+                    });
+                });
+
+                // Group by cost type
+                const costBreakdown = await new Promise((resolve, reject) => {
+                    db.all('SELECT cost, COUNT(*) as count FROM telegram_events WHERE cost IS NOT NULL GROUP BY cost', [], (err, rows) => {
+                        if (err) reject(err);
+                        else {
+                            const map = {};
+                            rows.forEach(r => { map[r.cost] = r.count; });
+                            resolve(map);
+                        }
+                    });
+                });
+
+                // Group by merit
+                const meritCount = await new Promise((resolve, reject) => {
+                    db.get('SELECT COUNT(*) as count FROM telegram_events WHERE merit = 1', [], (err, row) => {
+                        if (err) reject(err);
+                        else resolve(row ? row.count : 0);
+                    });
+                });
+
+                // Aggregated deduplication gates from daily stats
+                const dedupSummary = await new Promise((resolve, reject) => {
+                    db.get(`
+                        SELECT 
+                            SUM(messages_scraped) as scraped,
+                            SUM(skipped_short) as short,
+                            SUM(skipped_blacklist) as blacklist,
+                            SUM(skipped_seen) as seen,
+                            SUM(skipped_exact_duplicate) as exact_dupe,
+                            SUM(skipped_near_duplicate) as near_dupe,
+                            SUM(skipped_past) as past,
+                            SUM(skipped_title_duplicate) as title_dupe,
+                            SUM(sent_to_gemini) as gemini,
+                            SUM(events_found) as events
+                        FROM scraper_daily_stats
+                    `, [], (err, row) => {
+                        if (err) reject(err);
+                        else resolve(row || {});
+                    });
+                });
+
+                res.json({
+                    totalEventsAllTime,
+                    totalEventsToday,
+                    categoryBreakdown,
+                    topicBreakdown,
+                    costBreakdown,
+                    meritCount,
+                    dedupSummary
+                });
+            } catch (err) {
+                res.status(500).json({ error: err.message });
+            }
+        });
+
+        // Get daily scraper history
+        this.app.get('/stats/telegram/history', async (req, res) => {
+            const days = parseInt(req.query.days) || 30;
+            try {
+                const history = await new Promise((resolve, reject) => {
+                    db.all(
+                        'SELECT * FROM scraper_daily_stats ORDER BY date DESC LIMIT ?',
+                        [days],
+                        (err, rows) => {
+                            if (err) reject(err);
+                            else resolve(rows ? rows.reverse() : []); // Reverse to return chronological order
+                        }
+                    );
+                });
+                res.json(history);
+            } catch (err) {
+                res.status(500).json({ error: err.message });
             }
         });
     }

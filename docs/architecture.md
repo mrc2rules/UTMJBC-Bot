@@ -11,28 +11,18 @@ UTMJBC Bot is designed as a modular, sharded Discord application combining an id
 
 ## :material-sitemap: High-Level Process Topology
 
-```text
-                     ┌─────────────────────────────┐
-                     │        sharder.js           │
-                     │  Discord ShardingManager     │
-                     │  (auto-shards, respawns)     │
-                     └────────────┬────────────────┘
-                                  │ spawns
-                     ┌────────────▼────────────────┐
-                     │        EmailBot.js           │
-                     │  Main Discord bot process    │
-                     │  • Interaction handler       │
-                     │  • Event listeners           │
-                     │  • Command loader            │
-                     └──┬──────────┬──────────┬────┘
-                        │          │          │
-           ┌────────────▼──┐  ┌────▼────┐  ┌─▼──────────────┐
-           │  Email System  │  │ Gemini  │  │  Telegram Pipe │
-           │  MailSender    │  │ Query   │  │  TelegramListener│
-           │  (nodemailer)  │  │ (/askai)│  │  → Scraper      │
-           └────────────────┘  └─────────┘  │  → GeminiAnalyser│
-                                             │  → DiscordPublisher│
-                                             └────────────────────┘
+```mermaid
+graph TD
+    sharder["sharder.js<br/>Discord ShardingManager<br/>(auto-shards, respawns)"]
+    bot["EmailBot.js<br/>Main Discord Bot Process<br/>• Interaction Handler<br/>• Event Listeners<br/>• Command Loader"]
+    email["Email System<br/>MailSender (nodemailer)"]
+    gemini["Gemini AI Query<br/>/askai Grounded Search"]
+    telegram["Telegram Pipeline<br/>TelegramListener → Scraper<br/>→ GeminiAnalyser → DiscordPublisher"]
+
+    sharder -->|spawns| bot
+    bot -->|delegates| email
+    bot -->|queries| gemini
+    bot -->|orchestrates| telegram
 ```
 
 ---
@@ -82,31 +72,28 @@ To prevent thread contention and isolate domain responsibilities, the bot mainta
 
 ## :material-shield-check: Email Verification Lifecycle
 
-```text
-User initiates /verify or clicks Verification Embed Button
-                           │
-                           ▼
-          showEmailModal() — Renders Discord Modal
-                           │
-                           ▼ (User submits address)
-          Email Modal Handler (EmailBot.js)
-             1. Verify guild configuration readiness
-             2. emailIsBlacklisted() → Reject if blocked
-             3. emailMatchesDomains() → Reject if domain invalid
-             4. UserTimeout → Enforce anti-spam cooldown
-             5. MailSender.sendEmail() → Dispatch 6-digit OTP
-             6. Cache { code, emailHash } in transient memory map
-                           │
-                           ▼ (User clicks "Enter Code" button)
-          Code Modal Handler (EmailBot.js)
-             1. Fetch cached OTP for user+guild composite key
-             2. Validate entered code
-             3. On Success:
-                a. Resolve domain roles + default roles
-                b. Check database for existing email claims
-                c. Persist user hash in SQLite database
-                d. Assign roles via Discord Guild Member API
-                e. Dispatch audit log embed to designated log channel
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Bot as EmailBot.js
+    participant DB as SQLite (bot.db)
+    participant Mail as MailSender
+
+    User->>Bot: Runs /verify or clicks Verification Button
+    Bot->>User: Renders Email Input Modal
+    User->>Bot: Submits email address
+    Bot->>Bot: Validate domain & blacklist check
+    Bot->>Bot: Enforce UserTimeout cooldown
+    Bot->>Mail: sendEmail(userEmail, OTP)
+    Mail-->>User: Delivers 6-digit verification code
+    Bot->>User: Shows "Enter Code" modal/button
+    User->>Bot: Submits 6-digit OTP
+    Bot->>Bot: Verify cached code matches
+    Bot->>DB: Check existing email claim & persist MD5 hash
+    Bot->>Bot: Assign verified & domain-specific roles
+    Bot->>Bot: Dispatch audit log embed
+    Bot-->>User: Success confirmation!
 ```
 
 ---
@@ -114,6 +101,20 @@ User initiates /verify or clicks Verification Embed Button
 ## :material-filter: Telegram Scraper Deduplication Stack
 
 The Telegram pipeline applies a strict 4-stage filter before invoking AI processing to conserve API tokens and prevent duplicate threads.
+
+```mermaid
+flowchart LR
+    msg["Raw Telegram Message"] --> gate1{"1. Exact ID Match?"}
+    gate1 -->|Yes| skip["Skip & Ignore"]
+    gate1 -->|No| gate2{"2. MD5 Content Match?"}
+    gate2 -->|Yes| skip
+    gate2 -->|No| gate3{"3. SimHash Distance ≤ 5?"}
+    gate3 -->|Yes| skip
+    gate3 -->|No| ai["Gemini AI Analysis"]
+    ai --> gate4{"4. Title Duplicate in 14d?"}
+    gate4 -->|Yes| skip
+    gate4 -->|No| post["Publish Forum Thread"]
+```
 
 | Layer | Method | Window / Threshold |
 |-------|--------|--------------------|

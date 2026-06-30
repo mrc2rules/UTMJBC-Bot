@@ -162,6 +162,57 @@ image: https://media.discordapp.net/attachments/1423008246691659898/152135224877
     </div>
 </div>
 
+<br>
+<hr>
+<br>
+
+<h2 id="telegram-scraper-analytics">🤖 Telegram AI Scraper Analytics</h2>
+
+<div class="grid cards" markdown>
+
+-   :material-calendar-range: **Events Published**
+
+    ---
+
+    <h2 style="margin: 0; font-family: monospace;"><span id="eventsToday">—</span> / <span id="eventsAll">—</span></h2>
+    Today / All Time
+
+-   :material-medal: **UTM Merit Percentage**
+
+    ---
+
+    <h2 style="margin: 0; font-family: monospace;"><span id="meritPercentage">—</span>%</h2>
+    Offering Merit Points
+
+</div>
+
+<div class="chart-section">
+    <div class="chart-title">🛡️ Message Deduplication Gate Funnel</div>
+    <div class="chart-wrapper">
+        <canvas id="dedupFunnelChart"></canvas>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><span class="legend-dot teal"></span> Messages Count</div>
+    </div>
+</div>
+
+<div class="chart-section">
+    <div class="chart-title">🏷️ Event Category Distribution</div>
+    <div class="chart-wrapper" style="height: 340px;">
+        <canvas id="categoryChart"></canvas>
+    </div>
+</div>
+
+<div class="chart-section">
+    <div class="chart-title">🌐 Event Topic Popularity</div>
+    <div class="chart-wrapper">
+        <canvas id="topicChart"></canvas>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><span class="legend-dot gold"></span> Events Count</div>
+    </div>
+</div>
+
 <div class="last-updated">Last updated: <span id="lastUpdated">-</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -384,6 +435,139 @@ async function updateCharts(days) {
     });
 }
 
+let dedupChart, categoryChart, topicChart;
+
+async function fetchTelegramStats() {
+    try {
+        const res = await fetch(`${API_BASE}/stats/telegram`);
+        const data = await res.json();
+
+        document.getElementById('eventsToday').textContent = formatNumber(data.totalEventsToday);
+        document.getElementById('eventsAll').textContent = formatNumber(data.totalEventsAllTime);
+        
+        const meritPercent = data.totalEventsAllTime > 0 
+            ? ((data.meritCount / data.totalEventsAllTime) * 100).toFixed(1)
+            : '0.0';
+        document.getElementById('meritPercentage').textContent = meritPercent;
+
+        updateTelegramCharts(data);
+    } catch (err) {
+        console.error('Failed to fetch telegram stats:', err);
+    }
+}
+
+function updateTelegramCharts(data) {
+    if (dedupChart) dedupChart.destroy();
+    if (categoryChart) categoryChart.destroy();
+    if (topicChart) topicChart.destroy();
+
+    const ds = data.dedupSummary || {};
+    const gatesLabels = [
+        '1. Raw Messages',
+        '2. Filtered: Short',
+        '3. Filtered: Blacklist',
+        '4. Filtered: Already Seen',
+        '5. Filtered: Exact Dupe',
+        '6. Filtered: Near Dupe',
+        '7. Filtered: Past Event',
+        '8. Filtered: Title Dupe',
+        '9. Sent to Gemini AI',
+        '10. Published Events'
+    ];
+    const gatesData = [
+        ds.scraped || 0,
+        ds.short || 0,
+        ds.blacklist || 0,
+        ds.seen || 0,
+        ds.exact_dupe || 0,
+        ds.near_dupe || 0,
+        ds.past || 0,
+        ds.title_dupe || 0,
+        ds.gemini || 0,
+        ds.events || 0
+    ];
+
+    dedupChart = new Chart(document.getElementById('dedupFunnelChart'), {
+        type: 'bar',
+        data: {
+            labels: gatesLabels,
+            datasets: [{
+                label: 'Message Count',
+                data: gatesData,
+                backgroundColor: 'rgba(13, 148, 136, 0.7)',
+                borderColor: 'rgba(13, 148, 136, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#6b7280' } },
+                y: { grid: { display: false }, ticks: { color: '#6b7280' } }
+            }
+        }
+    });
+
+    // Category Doughnut Chart
+    const categories = Object.keys(data.categoryBreakdown || {});
+    const categoryCounts = Object.values(data.categoryBreakdown || {});
+    
+    categoryChart = new Chart(document.getElementById('categoryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: categories,
+            datasets: [{
+                data: categoryCounts,
+                backgroundColor: [
+                    '#0d9488', '#d4940a', '#0284c7', '#4f46e5',
+                    '#db2777', '#ea580c', '#16a34a', '#4b5563'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { color: '#6b7280', boxWidth: 12 }
+                }
+            }
+        }
+    });
+
+    // Topic Bar Chart
+    const topics = Object.keys(data.topicBreakdown || {});
+    const topicCounts = Object.values(data.topicBreakdown || {});
+
+    topicChart = new Chart(document.getElementById('topicChart'), {
+        type: 'bar',
+        data: {
+            labels: topics,
+            datasets: [{
+                label: 'Events Count',
+                data: topicCounts,
+                backgroundColor: 'rgba(212, 148, 10, 0.7)',
+                borderColor: 'rgba(212, 148, 10, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#6b7280' } },
+                y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#6b7280' }, beginAtZero: true, precision: 0 }
+            }
+        }
+    });
+}
+
 // Control buttons
 document.querySelectorAll('.control-btn').forEach(btn => {
     btn.addEventListener('click', function() {
@@ -396,8 +580,12 @@ document.querySelectorAll('.control-btn').forEach(btn => {
 
 // Initial load
 fetchCurrentStats();
+fetchTelegramStats();
 updateCharts(currentDays);
 
 // Auto-refresh every 30 seconds
-setInterval(fetchCurrentStats, 30000);
+setInterval(() => {
+    fetchCurrentStats();
+    fetchTelegramStats();
+}, 30000);
 </script>

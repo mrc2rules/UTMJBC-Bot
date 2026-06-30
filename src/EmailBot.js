@@ -9,7 +9,6 @@ const fs = require("fs");
 const {getLocale, defaultLanguage} = require('./Language')
 require("./database/ServerSettings");
 const ServerStatsAPI = require("./api/ServerStatsAPI");
-const topggAPI = require("./api/TopGG")
 const MailSender = require("./mail/MailSender")
 const sendVerifyMessage = require("./bot/sendVerifyMessage")
 const {showEmailModal} = require("./bot/showEmailModal")
@@ -181,13 +180,6 @@ bot.once('clientReady', async () => {
                     break
             }
         })
-    }
-    if (!bot.shard) {
-        try {
-            topggAPI(bot);
-        } catch (e) {
-            console.error('Failed to start TopGG API:', e);
-        }
     }
     await registerAllGuilds(bot);
     bot.user.setActivity("/verify | Website", { type: "PLAYING", url: "https://emailbot.larskaesberg.de" });
