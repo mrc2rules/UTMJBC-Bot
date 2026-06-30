@@ -1,59 +1,102 @@
-<meta name="description" content="UTMJBC Bot - Email verification and AI event scraper for UTM Johor Bahru Community Discord server.">
-<meta name="keywords" content="UTMJBC Bot Email Verify UTM Discord Event Scraper">
-<meta name="author" content="UTM JBC">
+---
+title: Home
+description: UTMJBC Bot — Email verification and AI-powered Telegram event scraper for the UTM Johor Bahru Community Discord server.
+---
 
 # UTMJBC Bot
 
-## Built With
+**Automated identity verification and AI-powered campus event syndication for the Universiti Teknologi Malaysia (UTM) Johor Bahru Community.**
 
-<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 24px; margin: 20px 0;">
-<a href="https://discord.com/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/discord.png" alt="Discord" style="height: 56px; width: auto;" title="Discord"></a>
-<a href="https://nodejs.org/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/node.png" alt="Node.js" style="height: 56px; width: auto;" title="Node.js"></a>
-<a href="https://www.npmjs.com/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/npm.png" alt="npm" style="height: 40px; width: auto;" title="npm"></a>
-<a href="https://discord.js.org/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/djs.png" alt="Discord.js" style="height: 56px; width: auto;" title="Discord.js"></a>
-<a href="https://nodemailer.com/"><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/nodemailer.webp" alt="Nodemailer" style="height: 48px; width: auto;" title="Nodemailer"></a>
+---
+
+## Live System Overview
+
+<div class="grid cards" markdown>
+
+-   :material-server: **Active Servers**
+
+    ---
+
+    <h2 id="serverCount" style="margin: 0; font-family: monospace;">—</h2>
+    Connected Discord guilds
+
+-   :material-check-decagram: **Verified Users**
+
+    ---
+
+    <h2 style="margin: 0; font-family: monospace;"><span id="verifiedToday">—</span> / <span id="verifiedAll">—</span></h2>
+    Today / All Time
+
+-   :material-email-fast: **Emails Processed**
+
+    ---
+
+    <h2 style="margin: 0; font-family: monospace;"><span id="emailsToday">—</span> / <span id="emailsAll">—</span></h2>
+    Today / All Time
+
 </div>
 
-## Statistics
+[Explore Detailed Analytics →](statistics.md){ .md-button .md-button--primary }
+[View Commands](commands.md){ .md-button }
 
-Server count: <strong id="serverCount">0</strong><br>
-Users verified: <strong id="verifiedToday">0</strong> today / <strong id="verifiedAll">0</strong> all time<br>
-Emails sent: <strong id="emailsToday">0</strong> today / <strong id="emailsAll">0</strong> all time
+---
 
-[View detailed statistics →](statistics.md)
+## Core Capabilities
 
-## Description
+UTMJBC Bot is a multi-purpose architecture designed specifically for university Discord communities. It combines two robust subsystems under a single sharded process:
 
-UTMJBC Bot is a multi-purpose Discord bot tailored for the Universiti Teknologi Malaysia (UTM) community. It provides:
-1. **Email Verification**: Verifies student and staff domain ownership (`@graduate.utm.my`, `@utm.my`) with automatic domain-specific role assignments.
-2. **AI Event Scraper**: Automatically monitors campus Telegram channels, extracts structured event details using Gemini AI, normalises titles, filters out duplicates, and publishes rich event cards directly to Discord forum threads.
+=== ":material-email-check: Email Verification"
 
-## Usage
+    Secures server access by confirming student and faculty institutional domain ownership (`@graduate.utm.my`, `@utm.my`).
 
-### Join Discord
+    - **One-Time Password (OTP):** Generates a secure 6-digit verification code delivered via high-priority HTML email.
+    - **Domain-Specific Roles:** Maps different email suffixes to distinct Discord roles (e.g., undergraduates vs. postgraduates).
+    - **Zero Plaintext Storage:** Protects student privacy by storing cryptographic MD5 hashes rather than raw email addresses.
+    - **Granular Security:** Features custom wildcard allowlists (`/domain add`) and instant blacklist filtering (`/blacklist add`).
 
-[Click here](https://discord.gg/vuGTVyFgck) to join the official UTM Johor Bahru Community Discord server.
+=== ":material-rss: AI Event Scraper"
 
-### Need Help?
+    Monitors public campus Telegram broadcasts and syndicates rich, structured event cards directly into Discord forum threads.
 
-For bug reports or feature requests, visit our [GitHub Repository](https://github.com/mrc2rules/UTMJBC-Bot).
+    - **Multi-Layer Deduplication:** Filters broadcast noise using a 4-tier pipeline (Message ID → MD5 Content Hash → 64-bit SimHash near-duplicate detection → Title Hash).
+    - **Gemini 2.5 Flash AI:** Automatically classifies posts, extracts key metadata (date, location, cost, merit points, registration links), and translates Malay announcements into English.
+    - **Automated Lifecycle:** Automatically locks and archives forum threads once event end-dates have passed.
+
+=== ":material-robot: Grounded AI Assistant"
+
+    Provides instant, verified answers to campus questions right inside Discord.
+
+    - **Command:** `/askai <question>`
+    - **Authoritative Grounding:** Restricts search and citations strictly to official sources (`utm.my` and `utm.gitbook.io`).
+    - **Public Access:** Available to any server member without administrative privileges.
+
+---
+
+## Quick Navigation
+
+| Resource | Purpose | Link |
+|----------|---------|------|
+| :material-github: **Source Code** | View repository, report bugs, contribute | [mrc2rules/UTMJBC-Bot](https://github.com/mrc2rules/UTMJBC-Bot) |
+| :material-chat: **Discord Server** | Join the official UTM Johor Bahru Community | [discord.gg/vuGTVyFgck](https://discord.gg/vuGTVyFgck) |
+| :material-book-open-page-variant: **Community Guide** | Student guides, notes, and academic references | [utm.gitbook.io](https://utm.gitbook.io/) |
+
+---
+
+!!! warning "Legal Disclaimer"
+    **UTM Johor Bahru Community (UTMJBC)** and the **UTMJBC Bot** are independent student-led initiatives. They are **not affiliated with, sponsored by, or officially endorsed by Universiti Teknologi Malaysia (UTM)**.
 
 <script>
-const serverCount = document.getElementById("serverCount");
-const verifiedToday = document.getElementById("verifiedToday");
-const verifiedAll = document.getElementById("verifiedAll");
-const emailsToday = document.getElementById("emailsToday");
-const emailsAll = document.getElementById("emailsAll");
+const ids = ['serverCount','verifiedToday','verifiedAll','emailsToday','emailsAll'];
+const keys = ['serverCount','usersVerifiedToday','usersVerifiedAll','mailsSendToday','mailsSendAll'];
 
-function refreshData(){
-  fetch('https://services-jbcemail.alwaysdata.net/stats/current')
-    .then(response => response.json())
+function refreshData() {
+  fetch('https://jbcemail.alwaysdata.net/stats/current')
+    .then(r => r.json())
     .then(data => {
-      serverCount.textContent = data.serverCount;
-      verifiedToday.textContent = data.usersVerifiedToday;
-      verifiedAll.textContent = data.usersVerifiedAll;
-      emailsToday.textContent = data.mailsSendToday;
-      emailsAll.textContent = data.mailsSendAll;
+      ids.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = data[keys[i]] ?? '—';
+      });
     })
     .catch(() => {});
 }

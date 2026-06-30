@@ -86,11 +86,22 @@ module.exports = {
 
         // ── stop ──────────────────────────────────────────────────────────────
         if (action === 'stop') {
-            const stopped = stopScrapeCron();
+            const stoppedCron = stopScrapeCron();
+            let messages = [];
+
+            if (state.isScraping) {
+                state.cancelScrape = true;
+                messages.push('⏹️ **Active scrape cycle aborted.**');
+            }
+            if (stoppedCron) {
+                messages.push('⏹️ **Auto-scraping stopped.** The scheduled cron has been cancelled.');
+            }
+            if (messages.length === 0) {
+                messages.push('⚠️ No active scrape cycle or auto-scraping schedule is currently running.');
+            }
+
             return interaction.reply({
-                content: stopped
-                    ? '⏹️ **Auto-scraping stopped.** The scheduled cron has been cancelled.\nYou can still run `/scrape` manually at any time.'
-                    : '⚠️ Auto-scraping is not currently running — nothing to stop.',
+                content: messages.join('\n'),
                 ephemeral: true,
             });
         }
@@ -135,6 +146,9 @@ module.exports = {
 
             if (result.skipped) {
                 return interaction.editReply('⚠️ Scrape skipped — already running.');
+            }
+            if (result.cancelled) {
+                return interaction.editReply('⏹️ Scrape cycle was aborted by user.');
             }
             if (result.error) {
                 return interaction.editReply(`❌ Scrape failed: ${result.error}`);

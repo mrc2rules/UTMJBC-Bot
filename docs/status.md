@@ -1,5 +1,7 @@
-<meta name="description" content="Status page for UTMJBC Bot services including the mail verification server and bot API.">
-<meta name="keywords" content="UTMJBC Bot Status Services Health Check UTM">
+---
+title: Service Status
+description: Status page for UTMJBC Bot services including the mail verification server and bot API.
+---
 
 # Service Status
 
@@ -82,7 +84,7 @@
       UTMJBC API
     </h3>
     <div id="api-status" class="status-text">Checking...</div>
-    <div class="status-url">https://services-jbcemail.alwaysdata.net</div>
+    <div class="status-url">https://jbcemail.alwaysdata.net</div>
   </div>
 
   <div class="status-card">
@@ -91,7 +93,7 @@
       Mail Server
     </h3>
     <div id="mail-status" class="status-text">Checking...</div>
-    <div class="status-url">services-jbcemail.alwaysdata.net</div>
+    <div class="status-url">jbcemail.alwaysdata.net</div>
   </div>
 
   <div class="status-card">
@@ -110,8 +112,8 @@
 
 | Service | Description | Endpoint |
 |---------|-------------|----------|
-| UTMJBC API | Provides statistics and event scraper functionality | `services-jbcemail.alwaysdata.net` |
-| Mail Server | SMTP server for sending verification emails | `services-jbcemail.alwaysdata.net` |
+| UTMJBC API | Provides statistics and event scraper functionality | `jbcemail.alwaysdata.net` |
+| Mail Server | SMTP server for sending verification emails | `jbcemail.alwaysdata.net` |
 | Email Delivery | Monitors email send/verification ratio | - |
 
 ## Need Help?
@@ -137,7 +139,7 @@ function updateLastChecked() {
 
 async function checkApiStatus() {
   try {
-    const response = await fetch('https://services-jbcemail.alwaysdata.net/stats/current', {
+    const response = await fetch('https://jbcemail.alwaysdata.net/stats/current', {
       method: 'GET',
       mode: 'cors'
     });
@@ -161,7 +163,7 @@ async function checkApiStatus() {
 async function checkMailStatus() {
   try {
     // Check service via HTTPS
-    const response = await fetch('https://services-jbcemail.alwaysdata.net', {
+    const response = await fetch('https://jbcemail.alwaysdata.net', {
       method: 'HEAD',
       mode: 'no-cors'
     });

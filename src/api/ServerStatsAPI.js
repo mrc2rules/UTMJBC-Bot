@@ -31,11 +31,7 @@ class ServerStatsAPI {
 
     registerEndpoints() {
         this.app.use(cors({
-            origin: [
-                "https://jbcbot.rahbab.com",
-                "https://services-jbcemail.alwaysdata.net",
-                "http://localhost:8000"
-            ]
+            origin: "*"
         }));
 
         this.app.get('/mailsSendAll', (req, res) => {

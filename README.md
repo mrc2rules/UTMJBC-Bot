@@ -1,25 +1,23 @@
 <!--
-*** UTM Johor Bahru Community - Email Verify Bot
+  UTM Johor Bahru Community — UTMJBC Bot
 -->
 
-<!-- PROJECT LOGO -->
-<br />
+<br>
 <p align="center">
   <a><img src="https://i.imgur.com/GmnbsON.png" alt="UTM JBC" width="300" title="UTM JBC"></a>
-  <h3 align="center">UTM JBC Email Verification Bot</h3>
+  <h3 align="center">UTMJBC Bot</h3>
   <p align="center">
-    Email verification and specialized AI powered query bot for UTM JBC.
+    Email verification and AI-powered event feed for the UTM Johor Bahru Community Discord.
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/github/actions/workflow/status/mrc2rules/EmailVerify/ci.yml?style=for-the-badge" alt="Build Status">
-    <img src="https://img.shields.io/github/license/mrc2rules/EmailVerify?style=for-the-badge" alt="License">
-    <img src="https://img.shields.io/github/forks/mrc2rules/EmailVerify?style=for-the-badge&logo=github&logoColor=white" alt="Forks">
-    <img src="https://img.shields.io/github/stars/mrc2rules/EmailVerify?style=for-the-badge&logo=github&logoColor=white" alt="Stars">
+    <img src="https://img.shields.io/github/actions/workflow/status/mrc2rules/UTMJBC-Bot/ci.yml?style=for-the-badge" alt="Build Status">
+    <img src="https://img.shields.io/github/license/mrc2rules/UTMJBC-Bot?style=for-the-badge" alt="License">
+    <img src="https://img.shields.io/github/forks/mrc2rules/UTMJBC-Bot?style=for-the-badge&logo=github&logoColor=white" alt="Forks">
+    <img src="https://img.shields.io/github/stars/mrc2rules/UTMJBC-Bot?style=for-the-badge&logo=github&logoColor=white" alt="Stars">
   </p>
 
   <p align="center">
-    </a>
     <a href="https://discord.gg/vuGTVyFgck">
       <img src="https://img.shields.io/discord/1407328981929431071?style=for-the-badge&logo=discord&logoColor=7289da&label=Join%20Discord&color=7289da" alt="Join Discord">
     </a>
@@ -28,34 +26,14 @@
 
 ---
 
-<!-- TABLE OF CONTENTS -->
-<details open="open">
-  <summary><h2 style="display: inline-block">📋 Table of Contents</h2></summary>
-  <ol>
-    <li><a href="#-about">About</a></li>
-    <li><a href="#-how-it-works">How It Works</a></li>
-    <li><a href="#-commands">Commands</a></li>
-    <li>
-      <a href="#-self-hosting">Self Hosting</a>
-      <ul>
-        <li><a href="#docker-recommended">Docker (Recommended)</a></li>
-        <li><a href="#manual-installation">Manual Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#-contributors">Contributors</a></li>
-  </ol>
-</details>
-
----
-
 ## 📖 About
 
-This is the official bot for the **UTMJBC** Discord server. It handles email verification for students and provides an AI-powered query system to answer questions relevant to UTM students.
+The official bot for the **UTMJBC** Discord server. It has two independent features:
 
-- Email verification to confirm student identity
-- AI-powered grounded query system for UTM-related questions, with the help of UTMWiki (https://utm.gitbook.io/) 
+1. **Email Verification** — students enter their institutional email, receive a 6-digit OTP, and are automatically assigned Discord roles based on their domain.
+2. **Telegram Event Scraper** — monitors public UTM Telegram channels, classifies messages with Gemini AI, deduplicates them, and publishes structured event threads to a Discord forum channel.
 
-> ⚠️ **Disclaimer:** UTM Johor Bahru Community (UTMJBC) and this project are **not affiliated with or endorsed by Universiti Teknologi Malaysia (UTM)** in any way. This is an independent student-run community.
+> ⚠️ **Disclaimer:** UTMJBC is an independent student-run community and is **not affiliated with or endorsed by Universiti Teknologi Malaysia (UTM)**.
 
 ---
 
@@ -66,7 +44,8 @@ This is the official bot for the **UTMJBC** Discord server. It handles email ver
 | Command | Description |
 |---------|-------------|
 | `/verify` | Start the email verification process |
-| `/data delete-user` | Delete your verification data and remove verified status |
+| `/data delete-user` | Delete your verification data and remove your verified status |
+| `/askai <question>` | Ask an AI question about UTM (grounded in utm.my + utm.gitbook.io) |
 
 ### 👥 Role Configuration
 
@@ -110,7 +89,7 @@ This is the official bot for the **UTMJBC** Discord server. It handles email ver
 |---------|-------------|
 | `/settings language <lang>` | Change the bot's language |
 | `/settings log-channel [channel]` | Set or disable the verification log channel |
-| `/settings verify-message [message]` | Set or reset custom message in verification emails |
+| `/settings verify-message [message]` | Set or reset a custom message in verification emails |
 | `/settings auto-verify <enable>` | Auto-prompt new members to verify on join |
 | `/settings auto-unverified <enable>` | Auto-assign unverified role to new members |
 
@@ -122,25 +101,26 @@ This is the official bot for the **UTMJBC** Discord server. It handles email ver
 | `/manualverify <user> <email>` | Manually verify a user without email confirmation |
 | `/set_error_notify` | Configure where error notifications are sent |
 
+### 📡 Telegram Scraper
+
+| Command | Description |
+|---------|-------------|
+| `/scrape [run/start/stop]` | Control the event scraper |
+| `/addchannel <channel_id>` | Add a Telegram channel to monitor |
+| `/removechannel <channel_id>` | Stop monitoring a channel |
+| `/listchannels` | View all monitored channels |
+| `/tgblacklist <action> [keyword]` | Manage the scraper keyword blacklist |
+
 ### 📊 Information
 
 | Command | Description |
 |---------|-------------|
-| `/status` | View bot configuration, statistics, and check for issues |
+| `/status` | View bot configuration, statistics, and setup issues |
 | `/help` | Show setup instructions and command overview |
 
-### ⚠️ Data Management
+> ⚠️ Most commands require Administrator permissions.
 
-| Command | Description |
-|---------|-------------|
-| `/data delete-user` | Delete your personal verification data |
-| `/data delete-server` | Delete all server data and reset the bot |
-
-> ⚠️ **Note:** Most commands require administrator permissions
-
-### Important: Role Hierarchy
-
-The bot role **must be higher** in the role hierarchy than the verified and unverified roles, otherwise role assignment will fail.
+**Important:** The bot role must be **higher** in the Discord role hierarchy than the verified and unverified roles, otherwise role assignment will fail.
 
 ---
 
@@ -148,111 +128,104 @@ The bot role **must be higher** in the role hierarchy than the verified and unve
 
 ### Docker (Recommended)
 
-#### 1. Create a directory for the bot
 ```bash
-mkdir emailverify && cd emailverify
+mkdir utmjbc-bot && cd utmjbc-bot
+mkdir config data
 ```
 
-#### 2. Create the config file
-```bash
-mkdir config
-nano config/config.json
-```
+Create `config/config.json`:
 
 ```json
 {
-  "token": "<Discord Bot Token>",
+  "token":    "<Discord Bot Token>",
   "clientId": "<Discord Bot Client ID>",
-  "email": "<Email Address>",
-  "username": "<Mail Server Username>",
-  "password": "<Email Password>",
-  "smtpHost": "<SMTP Server>",
+  "email":    "<Sender Email Address>",
+  "username": "<SMTP Username>",
+  "password": "<SMTP Password or App Password>",
+  "smtpHost": "<SMTP Server, e.g. smtp.gmail.com>",
   "isGoogle": false
 }
 ```
 
-#### 3. Create docker-compose.yml
+Create `docker-compose.yml`:
+
 ```yaml
 version: '3'
 services:
-  emailverify:
-    image: ghcr.io/lkaesberg/emailverify:latest
-    ports:
-      - 8181:8181
+  utmjbc-bot:
+    image: ghcr.io/mrc2rules/utmjbc-bot:latest
+    environment:
+      - GEMINI_API_KEY=your_gemini_key
     volumes:
       - ./config:/usr/app/config
-    restart: always
+      - ./data:/usr/app/data
+    ports:
+      - "8181:8181"
+    restart: unless-stopped
 ```
 
-#### 4. Start the bot
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
-
----
 
 ### Manual Installation
 
-**Requirements:** Node.js v16.15.0 or higher
+**Requirements:** Node.js v18+
 
-#### 1. Clone the repository
 ```bash
-git clone https://github.com/mrc2rules/EmailVerify.git
-cd EmailVerify
-```
-
-#### 2. Create the config file
-```bash
-nano config/config.json
-```
-
-```json
-{
-  "token": "<Discord Bot Token>",
-  "clientId": "<Discord Bot Client ID>",
-  "email": "<Email Address>",
-  "username": "<Mail Server Username>",
-  "password": "<Email Password>",
-  "smtpHost": "<SMTP Server>",
-  "isGoogle": false
-}
-```
-
-#### 3. Install dependencies and start
-```bash
+git clone https://github.com/mrc2rules/UTMJBC-Bot.git
+cd UTMJBC-Bot
 npm install
+# fill in config/config.json (see above)
+export GEMINI_API_KEY=your_key_here
 npm start
 ```
 
----
+### Configuration Reference
 
-### Configuration Options
+| Field | Description |
+|-------|-------------|
+| `token` | Discord Bot Token from the [Developer Portal](https://discord.com/developers/applications) |
+| `clientId` | Discord Bot Client ID |
+| `email` | Email address that sends verification codes |
+| `username` | SMTP username (usually the same as `email`) |
+| `password` | SMTP password or Gmail App Password |
+| `smtpHost` | SMTP server (e.g. `smtp.gmail.com`) |
+| `isGoogle` | `true` if using Gmail |
+| `botDbPath` | Directory for persistent `bot.db` (recommended for hosted environments) |
+| `telegramApiId` | From [my.telegram.org](https://my.telegram.org) — required for the event scraper |
+| `telegramApiHash` | From [my.telegram.org](https://my.telegram.org) |
+| `telegramPhone` | Phone number associated with the Telegram account |
+| `telegramSession` | Save the session string here after first login (printed in logs) |
+| `discordEventForumId` | Discord forum channel ID where events are posted |
+| `GEMINI_API_KEY` | *(env var)* Google AI API key for Gemini features |
 
-| Option | Description |
-|--------|-------------|
-| `token` | Your Discord Bot Token from the [Discord Developer Portal](https://discord.com/developers/applications) |
-| `clientId` | Your Discord Bot's Client ID |
-| `email` | The email address that will send verification codes |
-| `username` | SMTP server username (usually your email address) |
-| `password` | SMTP server password or App Password |
-| `smtpHost` | Your SMTP server (e.g., `smtp.gmail.com`) |
-| `isGoogle` | Set to `true` if using Gmail |
-
-> 💡 **Gmail Users:** You need to create an [App Password](https://support.google.com/accounts/answer/185833) instead of using your regular password.
+> 💡 **Gmail:** Create an [App Password](https://support.google.com/accounts/answer/185833) and set `isGoogle: true`.
 
 ### Debugging
 
-Type `email` in the console to enable debugging messages for email errors.
+Type `email` in the console to toggle verbose SMTP error logging.
+
+---
+
+## 📚 Documentation
+
+Full documentation is available at the project docs site:
+
+- [Commands Reference](docs/commands.md)
+- [Self Hosting Guide](docs/self-hosting.md)
+- [Architecture Overview](docs/architecture.md)
+- [Developer API Reference](docs/api-reference.md)
 
 ---
 
 ## 👥 Contributors
 
 ### UTMJBC Development
-- **mrc2rules** - [GitHub](https://github.com/mrc2rules)
+- **mrc2rules** — [GitHub](https://github.com/mrc2rules)
 
 ### Original Project
-This bot is based on [EmailVerify](https://github.com/lkaesberg/EmailVerify) by [Lars Kaesberg](https://github.com/lkaesberg).
+Based on [EmailVerify](https://github.com/lkaesberg/EmailVerify) by [Lars Kaesberg](https://github.com/lkaesberg).
 
 ---
 

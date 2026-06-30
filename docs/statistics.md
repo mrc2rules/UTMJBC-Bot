@@ -1,7 +1,12 @@
-<meta name="description" content="UTMJBC Bot Statistics - Track verified users, emails sent, and community growth over time.">
-<meta name="keywords" content="UTMJBC Bot Statistics Analytics UTM Discord">
+---
+title: Live Statistics
+description: UTMJBC Bot Statistics — Track verified users, emails sent, and community growth over time.
+---
 
-# UTMJBC Bot Statistics
+# Live Analytics Dashboard
+
+!!! info "About Live Statistics"
+    These metrics are pulled dynamically from the primary shard's HTTP API (`GET /stats/current` and `GET /stats/history`) listening on port `8181`. If you are self-hosting, see the [Self Hosting Guide](self-hosting.md#how-statistics-work--setup) to point this dashboard to your own bot instance.
 
 <style>
 :root {
@@ -301,7 +306,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const API_BASE = 'https://services-jbcemail.alwaysdata.net';
+const API_BASE = 'https://jbcemail.alwaysdata.net';
 
 const baseOptions = {
     responsive: true,

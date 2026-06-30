@@ -58,6 +58,7 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
         logInfo(`[DEBUG] Channel ${channelId}: ${messages.length} total messages`);
 
         for (const msg of messages) {
+            if (state.cancelScrape) break;
             total++;
 
             // ── Gate 0: Skip short/empty messages ──────────────────────────
@@ -293,6 +294,7 @@ async function runScrape(discordClient, options = {}) {
     let totalEvents = 0, totalGemini = 0;
 
     for (const ch of channelsToScrape) {
+        if (state.cancelScrape) break;
         const { eventsFound, sentToGemini } = await scrapeChannel(
             discordChannel,
             ch.channel_id,
@@ -304,7 +306,15 @@ async function runScrape(discordClient, options = {}) {
         totalGemini += sentToGemini;
     }
 
+    const wasCancelled = state.cancelScrape;
     state.isScraping = false;
+    state.cancelScrape = false;
+
+    if (wasCancelled) {
+        logWarn('[Scraper] Scrape cycle aborted by user.');
+        return { cancelled: true };
+    }
+
     logInfo('[Scraper] Scrape cycle complete.');
 
     return { channelsScraped: channelsToScrape.length, totalEvents, totalGemini };

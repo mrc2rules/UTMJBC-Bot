@@ -9,6 +9,9 @@ const state = {
     // Scraping lock — prevents concurrent scrape cycles if /scrape is spammed
     // or if a cron tick fires while a manual scrape is still running.
     isScraping: false,
+
+    // Abort signal — set to true by /scrape stop to halt an active scrape loop.
+    cancelScrape: false,
 };
 
 module.exports = state;

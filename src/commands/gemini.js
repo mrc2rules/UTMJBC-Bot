@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require("disc
 const { getGeminiResponse } = require("../gemini/getGeminiResponse");
 
 module.exports = {
+    adminOnly: false,
     data: new SlashCommandBuilder()
         .setName("askai")
         .setDescription("Ask questions about UTM!")
