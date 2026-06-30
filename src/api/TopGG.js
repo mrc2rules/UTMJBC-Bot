@@ -1,8 +1,8 @@
-const {topggToken} = require("../../config/config.json");
-const {AutoPoster} = require("topgg-autoposter");
+const { topggToken } = require("../../config/config.json");
+const { AutoPoster } = require("topgg-autoposter");
 
 module.exports = function (bot) {
-    if (topggToken && topggToken.trim() !== '') {
+    if (topggToken !== undefined) {
         const poster = AutoPoster(topggToken, bot);
         poster.on("error", _ => {
         })

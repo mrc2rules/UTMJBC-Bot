@@ -1,0 +1,27 @@
+/* Default (Light) Mode overrides */
+:root, [data-md-color-scheme="default"] {
+  --md-primary-fg-color: #701f28 !important; /* UTM Maroon */
+  --md-primary-fg-color--dark: #501218 !important;
+  --md-primary-fg-color--light: #90303c !important;
+  
+  --md-accent-fg-color: #d4940a !important; /* UTM Gold */
+  --md-accent-fg-color--transparent: rgba(212, 148, 10, 0.1) !important;
+}
+
+/* Dark Mode overrides */
+[data-md-color-scheme="slate"] {
+  /* In dark mode, use UTM Gold as primary to ensure high contrast and readability on dark slate */
+  --md-primary-fg-color: #d4940a !important;
+  --md-primary-fg-color--dark: #b27c08 !important;
+  --md-primary-fg-color--light: #f5b324 !important;
+  
+  --md-accent-fg-color: #f5be41 !important;
+  --md-accent-fg-color--transparent: rgba(212, 148, 10, 0.15) !important;
+}
+
+/* Enclose logo in a circle */
+.md-logo img {
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #d4940a; /* Golden frame */
+}

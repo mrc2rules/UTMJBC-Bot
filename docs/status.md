@@ -1,109 +1,83 @@
 ---
 title: Service Status
 description: Status page for UTMJBC Bot services including the mail verification server and bot API.
+image: https://media.discordapp.net/attachments/1423008246691659898/1521352248779866193/image.png?ex=6a448531&is=6a4333b1&hm=75b044f51e709f66df528d721c97b6b507a935dec42681d7edbc42e34a96ed07&=&format=webp&quality=lossless&width=771&height=770
 ---
 
 # Service Status
 
 <style>
-.status-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin: 24px 0;
-}
-
-.status-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  background: #fafafa;
-}
-
-.status-card h3 {
-  margin: 0 0 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .status-indicator {
   width: 12px;
   height: 12px;
   border-radius: 50%;
   display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
   animation: pulse 2s infinite;
 }
 
 .status-indicator.online {
-  background-color: #4caf50;
-  box-shadow: 0 0 8px #4caf50;
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 
 .status-indicator.offline {
-  background-color: #f44336;
-  box-shadow: 0 0 8px #f44336;
+  background-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
   animation: none;
 }
 
 .status-indicator.checking {
-  background-color: #ff9800;
-  box-shadow: 0 0 8px #ff9800;
+  background-color: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-.status-text {
-  font-size: 14px;
-  color: #666;
-  margin: 4px 0 0 24px;
+  50% { opacity: 0.5; }
 }
 
 .status-url {
-  font-size: 12px;
-  color: #888;
-  margin: 8px 0 0 24px;
-  font-family: monospace;
+  display: block;
+  font-size: 0.75rem;
+  color: var(--md-default-fg-color--light, #888);
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 .last-checked {
-  font-size: 12px;
-  color: #999;
+  font-size: 0.75rem;
+  color: var(--md-default-fg-color--light, #888);
   margin-top: 16px;
   text-align: right;
 }
 </style>
 
-<div class="status-container">
-  <div class="status-card">
-    <h3>
-      <span id="api-indicator" class="status-indicator checking"></span>
-      UTMJBC API
-    </h3>
-    <div id="api-status" class="status-text">Checking...</div>
-    <div class="status-url">https://jbcemail.alwaysdata.net</div>
-  </div>
+<div class="grid cards" markdown>
 
-  <div class="status-card">
-    <h3>
-      <span id="mail-indicator" class="status-indicator checking"></span>
-      Mail Server
-    </h3>
-    <div id="mail-status" class="status-text">Checking...</div>
-    <div class="status-url">jbcemail.alwaysdata.net</div>
-  </div>
+-   :material-server: **Server**
 
-  <div class="status-card">
-    <h3>
-      <span id="delivery-indicator" class="status-indicator checking"></span>
-      Email Delivery
-    </h3>
-    <div id="delivery-status" class="status-text">Checking...</div>
-    <div id="delivery-details" class="status-url"></div>
-  </div>
+    ---
+
+    <span id="server-indicator" class="status-indicator checking"></span> <span id="server-status" style="font-weight: 500;">Checking...</span>
+    <span class="status-url">https://jbcemail.alwaysdata.net</span>
+
+-   :material-robot: **Discord Bot**
+
+    ---
+
+    <span id="bot-indicator" class="status-indicator checking"></span> <span id="bot-status" style="font-weight: 500;">Checking...</span>
+    <span class="status-url">UTMJBC Shard #0</span>
+
+-   :material-gmail: **GMail servers**
+
+    ---
+
+    <span id="gmail-indicator" class="status-indicator checking"></span> <span id="gmail-status" style="font-weight: 500;">Checking...</span>
+    <span id="gmail-details" class="status-url">smtp.gmail.com</span>
+
 </div>
 
 <div id="last-checked" class="last-checked"></div>
@@ -112,32 +86,32 @@ description: Status page for UTMJBC Bot services including the mail verification
 
 | Service | Description | Endpoint |
 |---------|-------------|----------|
-| UTMJBC API | Provides statistics and event scraper functionality | `jbcemail.alwaysdata.net` |
-| Mail Server | SMTP server for sending verification emails | `jbcemail.alwaysdata.net` |
-| Email Delivery | Monitors email send/verification ratio | - |
+| **Server** | Primary backend API serving statistics and verification queries | `jbcemail.alwaysdata.net` |
+| **Discord Bot** | Sharded Discord bot process handling server events and commands | `Gateway Shard #0` |
+| **GMail servers** | Google SMTP server cluster processing OTP verification emails | `smtp.gmail.com` |
 
 ## Need Help?
 
 If you're experiencing issues with the bot, please join our [Community Discord](https://discord.gg/vuGTVyFgck).
 
 <script>
-const apiIndicator = document.getElementById('api-indicator');
-const apiStatus = document.getElementById('api-status');
-const mailIndicator = document.getElementById('mail-indicator');
-const mailStatus = document.getElementById('mail-status');
-const deliveryIndicator = document.getElementById('delivery-indicator');
-const deliveryStatus = document.getElementById('delivery-status');
-const deliveryDetails = document.getElementById('delivery-details');
+const serverIndicator = document.getElementById('server-indicator');
+const serverStatus = document.getElementById('server-status');
+const botIndicator = document.getElementById('bot-indicator');
+const botStatus = document.getElementById('bot-status');
+const gmailIndicator = document.getElementById('gmail-indicator');
+const gmailStatus = document.getElementById('gmail-status');
+const gmailDetails = document.getElementById('gmail-details');
 const lastChecked = document.getElementById('last-checked');
 
 let latestStats = null;
 
 function updateLastChecked() {
   const now = new Date();
-  lastChecked.textContent = 'Last checked: ' + now.toLocaleTimeString();
+  if (lastChecked) lastChecked.textContent = 'Last checked: ' + now.toLocaleTimeString();
 }
 
-async function checkApiStatus() {
+async function checkServerStatus() {
   try {
     const response = await fetch('https://jbcemail.alwaysdata.net/stats/current', {
       method: 'GET',
@@ -146,85 +120,58 @@ async function checkApiStatus() {
     if (response.ok) {
       const data = await response.json();
       latestStats = data;
-      apiIndicator.className = 'status-indicator online';
-      apiStatus.textContent = 'Operational - Serving ' + data.serverCount + ' servers';
+      if (serverIndicator) serverIndicator.className = 'status-indicator online';
+      if (serverStatus) serverStatus.textContent = 'Operational';
     } else {
       latestStats = null;
-      apiIndicator.className = 'status-indicator offline';
-      apiStatus.textContent = 'Degraded - HTTP ' + response.status;
+      if (serverIndicator) serverIndicator.className = 'status-indicator offline';
+      if (serverStatus) serverStatus.textContent = 'Degraded - HTTP ' + response.status;
     }
   } catch (error) {
     latestStats = null;
-    apiIndicator.className = 'status-indicator offline';
-    apiStatus.textContent = 'Offline or unreachable';
+    if (serverIndicator) serverIndicator.className = 'status-indicator offline';
+    if (serverStatus) serverStatus.textContent = 'Offline or unreachable';
   }
 }
 
-async function checkMailStatus() {
-  try {
-    // Check service via HTTPS
-    const response = await fetch('https://jbcemail.alwaysdata.net', {
-      method: 'HEAD',
-      mode: 'no-cors'
-    });
-    // no-cors mode always returns opaque response, so we assume it's online if no network error
-    mailIndicator.className = 'status-indicator online';
-    mailStatus.textContent = 'Operational';
-  } catch (error) {
-    mailIndicator.className = 'status-indicator offline';
-    mailStatus.textContent = 'Offline or unreachable';
-  }
-}
-
-function checkDeliveryStatus() {
+function checkBotStatus() {
   if (!latestStats) {
-    deliveryIndicator.className = 'status-indicator offline';
-    deliveryStatus.textContent = 'Unable to check - API unavailable';
-    deliveryDetails.textContent = '';
+    if (botIndicator) botIndicator.className = 'status-indicator offline';
+    if (botStatus) botStatus.textContent = 'Unable to check - API unreachable';
     return;
   }
+  if (botIndicator) botIndicator.className = 'status-indicator online';
+  if (botStatus) botStatus.textContent = 'Operational - Connected to Discord';
+}
 
-  const emailsSent = latestStats.mailsSendToday || 0;
-  const usersVerified = latestStats.usersVerifiedToday || 0;
-
-  deliveryDetails.textContent = 'Today: ' + emailsSent + ' emails sent, ' + usersVerified + ' users verified';
-
-  // No emails sent today
-  if (emailsSent === 0) {
-    deliveryIndicator.className = 'status-indicator checking';
-    deliveryStatus.textContent = 'No activity - No emails sent today';
-    return;
-  }
-
-  // Calculate verification rate
-  const verificationRate = usersVerified / emailsSent;
-
-  // If verification rate is below 30% and at least 5 emails sent, there might be a problem
-  if (emailsSent >= 5 && verificationRate < 0.3) {
-    deliveryIndicator.className = 'status-indicator offline';
-    deliveryStatus.textContent = 'Potential issue - Low verification rate (' + Math.round(verificationRate * 100) + '%)';
-  }
-  // If verification rate is below 50% and significant volume, show warning
-  else if (emailsSent >= 10 && verificationRate < 0.5) {
-    deliveryIndicator.className = 'status-indicator checking';
-    deliveryStatus.textContent = 'Warning - Below average verification rate (' + Math.round(verificationRate * 100) + '%)';
-  }
-  // All good
-  else {
-    deliveryIndicator.className = 'status-indicator online';
-    deliveryStatus.textContent = 'Healthy - ' + Math.round(verificationRate * 100) + '% verification rate';
+async function checkGmailStatus() {
+  try {
+    if (latestStats && typeof latestStats.mailsSendAll === 'number') {
+      if (gmailIndicator) gmailIndicator.className = 'status-indicator online';
+      if (gmailStatus) gmailStatus.textContent = 'Operational';
+      const sentToday = latestStats.mailsSendToday || 0;
+      if (gmailDetails) gmailDetails.textContent = 'Today: ' + sentToday + ' verification emails processed';
+    } else {
+      await fetch('https://jbcemail.alwaysdata.net', {
+        method: 'HEAD',
+        mode: 'no-cors'
+      });
+      if (gmailIndicator) gmailIndicator.className = 'status-indicator online';
+      if (gmailStatus) gmailStatus.textContent = 'Operational';
+    }
+  } catch (error) {
+    if (gmailIndicator) gmailIndicator.className = 'status-indicator offline';
+    if (gmailStatus) gmailStatus.textContent = 'Offline or unreachable';
   }
 }
 
 async function checkAllServices() {
-  await Promise.all([checkApiStatus(), checkMailStatus()]);
-  checkDeliveryStatus();
+  await checkServerStatus();
+  checkBotStatus();
+  await checkGmailStatus();
   updateLastChecked();
 }
 
-// Initial check
 checkAllServices();
-
-// Refresh every 30 seconds
 setInterval(checkAllServices, 30000);
 </script>

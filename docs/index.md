@@ -1,6 +1,7 @@
 ---
 title: Home
 description: UTMJBC Bot — Email verification and AI-powered Telegram event scraper for the UTM Johor Bahru Community Discord server.
+image: https://media.discordapp.net/attachments/1423008246691659898/1521352248779866193/image.png?ex=6a448531&is=6a4333b1&hm=75b044f51e709f66df528d721c97b6b507a935dec42681d7edbc42e34a96ed07&=&format=webp&quality=lossless&width=771&height=770
 ---
 
 # UTMJBC Bot
@@ -12,13 +13,6 @@ description: UTMJBC Bot — Email verification and AI-powered Telegram event scr
 ## Live System Overview
 
 <div class="grid cards" markdown>
-
--   :material-server: **Active Servers**
-
-    ---
-
-    <h2 id="serverCount" style="margin: 0; font-family: monospace;">—</h2>
-    Connected Discord guilds
 
 -   :material-check-decagram: **Verified Users**
 

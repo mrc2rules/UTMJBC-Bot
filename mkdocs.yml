@@ -4,20 +4,20 @@ theme:
   name: material
   icon:
     repo: fontawesome/brands/github
-  logo: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/emailbot-border.png
-  favicon: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/emailbot.png
+  logo: https://media.discordapp.net/attachments/1423008246691659898/1521352248779866193/image.png?ex=6a448531&is=6a4333b1&hm=75b044f51e709f66df528d721c97b6b507a935dec42681d7edbc42e34a96ed07&=&format=webp&quality=lossless&width=771&height=770
+  favicon: https://media.discordapp.net/attachments/1423008246691659898/1521352248779866193/image.png?ex=6a448531&is=6a4333b1&hm=75b044f51e709f66df528d721c97b6b507a935dec42681d7edbc42e34a96ed07&=&format=webp&quality=lossless&width=771&height=770
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: black
-      accent: amber
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: black
-      accent: amber
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -58,3 +58,6 @@ nav:
   - Status: 'status.md'
   - Contributing: 'contributing.md'
   - Legal: 'legal.md'
+
+extra_css:
+  - stylesheets/extra.css

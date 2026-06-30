@@ -1,6 +1,7 @@
 ---
 title: Live Statistics
 description: UTMJBC Bot Statistics — Track verified users, emails sent, and community growth over time.
+image: https://media.discordapp.net/attachments/1423008246691659898/1521352248779866193/image.png?ex=6a448531&is=6a4333b1&hm=75b044f51e709f66df528d721c97b6b507a935dec42681d7edbc42e34a96ed07&=&format=webp&quality=lossless&width=771&height=770
 ---
 
 # Live Analytics Dashboard
@@ -12,138 +13,24 @@ description: UTMJBC Bot Statistics — Track verified users, emails sent, and co
 :root {
     --accent-gold: #d4940a;
     --accent-teal: #0d9488;
-    --accent-blue: #2563eb;
-    --bg-card: #ffffff;
-    --bg-hover: #fafafa;
-    --text-primary: #1f2937;
-    --text-muted: #6b7280;
-    --border-color: #e5e7eb;
-    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-    --shadow-hover: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
-}
-
-.stats-wrapper {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 32px;
-}
-
-.stats-hero {
-    display: flex;
-}
-
-.stats-hero .stat-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 32px;
-}
-
-.stats-hero .stat-value {
-    font-size: 3.5rem;
-}
-
-.stats-hero .stat-label {
-    font-size: 0.85rem;
-}
-
-.stats-column {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.stat-group {
-    background: var(--bg-card);
-    border-radius: 12px;
-    padding: 16px 20px;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex: 1;
-}
-
-.stat-group-icon {
-    font-size: 1.5rem;
-    opacity: 0.7;
-}
-
-.stat-group-content {
-    display: flex;
-    gap: 24px;
-    flex: 1;
-}
-
-.stat-item {
-    text-align: center;
-}
-
-.stat-card {
-    background: var(--bg-card);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.stat-card:hover, .stat-group:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-hover);
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--accent-gold);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    margin-bottom: 2px;
-}
-
-.stat-value.teal { color: var(--accent-teal); }
-.stat-value.blue { color: var(--accent-blue); }
-
-.stat-label {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 500;
-}
-
-@media (max-width: 600px) {
-    .stats-wrapper {
-        grid-template-columns: 1fr;
-    }
-    .stats-hero .stat-value {
-        font-size: 2.5rem;
-    }
-    .stat-group-content {
-        gap: 16px;
-    }
 }
 
 .chart-section {
-    background: var(--bg-card);
-    border-radius: 12px;
+    background: var(--md-default-bg-color);
+    border-radius: 0.2rem;
     padding: 24px;
     margin-bottom: 20px;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow);
+    border: 0.05rem solid var(--md-default-fg-color--lowest);
+    box-shadow: var(--md-shadow-z1);
 }
 
 .chart-title {
-    color: var(--text-primary);
+    color: var(--md-default-fg-color);
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 0.05rem solid var(--md-default-fg-color--lowest);
 }
 
 .chart-wrapper {
@@ -159,9 +46,9 @@ description: UTMJBC Bot Statistics — Track verified users, emails sent, and co
 }
 
 .control-btn {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    color: var(--text-muted);
+    background: var(--md-default-bg-color);
+    border: 0.05rem solid var(--md-default-fg-color--lowest);
+    color: var(--md-default-fg-color--light);
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
@@ -171,9 +58,9 @@ description: UTMJBC Bot Statistics — Track verified users, emails sent, and co
 }
 
 .control-btn:hover {
-    background: var(--bg-hover);
+    background: var(--md-code-bg-color);
     border-color: var(--accent-gold);
-    color: var(--text-primary);
+    color: var(--md-default-fg-color);
 }
 
 .control-btn.active {
@@ -195,7 +82,7 @@ description: UTMJBC Bot Statistics — Track verified users, emails sent, and co
     align-items: center;
     gap: 6px;
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--md-default-fg-color--light);
 }
 
 .legend-dot {
@@ -206,51 +93,31 @@ description: UTMJBC Bot Statistics — Track verified users, emails sent, and co
 
 .legend-dot.gold { background: var(--accent-gold); }
 .legend-dot.teal { background: var(--accent-teal); }
-.legend-dot.blue { background: var(--accent-blue); }
 
 .last-updated {
     text-align: right;
-    color: var(--text-muted);
+    color: var(--md-default-fg-color--light);
     font-size: 0.75rem;
     margin-top: 12px;
 }
 </style>
 
-<div class="stats-wrapper">
-    <div class="stats-hero">
-        <div class="stat-card">
-            <div class="stat-value blue" id="serverCount">-</div>
-            <div class="stat-label">Discord Servers</div>
-        </div>
-    </div>
-    <div class="stats-column">
-        <div class="stat-group">
-            <div class="stat-group-icon">✓</div>
-            <div class="stat-group-content">
-                <div class="stat-item">
-                    <div class="stat-value" id="verifiedToday">-</div>
-                    <div class="stat-label">Today</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="verifiedAll">-</div>
-                    <div class="stat-label">All Time</div>
-                </div>
-            </div>
-        </div>
-        <div class="stat-group">
-            <div class="stat-group-icon">✉</div>
-            <div class="stat-group-content">
-                <div class="stat-item">
-                    <div class="stat-value teal" id="emailsToday">-</div>
-                    <div class="stat-label">Today</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value teal" id="emailsAll">-</div>
-                    <div class="stat-label">All Time</div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="grid cards" markdown>
+
+-   :material-check-decagram: **Verified Users**
+
+    ---
+
+    <h2 style="margin: 0; font-family: monospace;"><span id="verifiedToday">—</span> / <span id="verifiedAll">—</span></h2>
+    Today / All Time
+
+-   :material-email-fast: **Emails Processed**
+
+    ---
+
+    <h2 style="margin: 0; font-family: monospace;"><span id="emailsToday">—</span> / <span id="emailsAll">—</span></h2>
+    Today / All Time
+
 </div>
 
 <div class="controls">
@@ -292,13 +159,6 @@ description: UTMJBC Bot Statistics — Track verified users, emails sent, and co
     <div class="chart-title">✉️ Total Emails Sent</div>
     <div class="chart-wrapper">
         <canvas id="emailsTotalChart"></canvas>
-    </div>
-</div>
-
-<div class="chart-section">
-    <div class="chart-title">🌐 Server Growth</div>
-    <div class="chart-wrapper">
-        <canvas id="serversChart"></canvas>
     </div>
 </div>
 
@@ -375,7 +235,7 @@ const autoScaleOptions = {
     }
 };
 
-let dailyChart, verificationRateChart, verifiedTotalChart, emailsTotalChart, serversChart;
+let dailyChart, verificationRateChart, verifiedTotalChart, emailsTotalChart;
 let currentDays = 7;
 
 function formatNumber(num) {
@@ -394,7 +254,6 @@ async function fetchCurrentStats() {
         const res = await fetch(`${API_BASE}/stats/current`);
         const data = await res.json();
         
-        document.getElementById('serverCount').textContent = formatNumber(data.serverCount);
         document.getElementById('verifiedToday').textContent = formatNumber(data.usersVerifiedToday);
         document.getElementById('verifiedAll').textContent = formatNumber(data.usersVerifiedAll);
         document.getElementById('emailsToday').textContent = formatNumber(data.mailsSendToday);
@@ -439,14 +298,12 @@ async function updateCharts(days) {
     const emailsDaily = history.map(h => h.mailsSendToday);
     const verifiedTotal = history.map(h => h.usersVerifiedAll);
     const emailsTotal = history.map(h => h.mailsSendAll);
-    const servers = history.map(h => h.serverCount);
     
     // Destroy existing charts
     if (dailyChart) dailyChart.destroy();
     if (verificationRateChart) verificationRateChart.destroy();
     if (verifiedTotalChart) verifiedTotalChart.destroy();
     if (emailsTotalChart) emailsTotalChart.destroy();
-    if (serversChart) serversChart.destroy();
     
     // Daily Activity Chart
     dailyChart = new Chart(document.getElementById('dailyChart'), {
@@ -521,18 +378,6 @@ async function updateCharts(days) {
             labels: labels,
             datasets: [
                 createDataset(emailsTotal, 'rgba(13, 148, 136, 1)', 'Total Emails')
-            ]
-        },
-        options: autoScaleOptions
-    });
-    
-    // Server Growth Chart (auto-scale, not starting at 0)
-    serversChart = new Chart(document.getElementById('serversChart'), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                createDataset(servers, 'rgba(37, 99, 235, 1)', 'Servers')
             ]
         },
         options: autoScaleOptions
