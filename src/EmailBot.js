@@ -1,6 +1,12 @@
 require('dotenv').config();
 const Discord = require('discord.js');
-const {token, clientId} = require('../config/config.json');
+let token = process.env.DISCORD_TOKEN || process.env.TOKEN;
+let clientId = process.env.CLIENT_ID || process.env.DISCORD_CLIENT_ID;
+try {
+    const config = require('../config/config.json');
+    if (!token) token = config.token;
+    if (!clientId) clientId = config.clientId;
+} catch {}
 const database = require('./database/Database.js')
 const {stdin, stdout} = require('process')
 const readline = require('readline')
@@ -307,7 +313,7 @@ bot.on('interactionCreate', async interaction => {
                     await interaction.followUp({ embeds: [blacklistEmbed], flags: MessageFlags.Ephemeral }).catch(() => {})
                     return
                 }
-                const hasValidFormat = emailText.split("@").length - 1 === 1 && !emailText.includes(' ')
+                const hasValidFormat = emailText.split("@").length - 1 === 1 && !emailText.includes(' ') && !/[\r\n\t]/.test(emailText);
                 const matchesDomain = emailMatchesDomains(emailText, serverSettings.domains)
                 if (!hasValidFormat || !matchesDomain) {
                     await interaction.followUp({ embeds: [createInvalidEmailEmbed(serverSettings.language)], flags: MessageFlags.Ephemeral }).catch(() => {})
@@ -325,7 +331,7 @@ bot.on('interactionCreate', async interaction => {
                 userTimeout.increaseWaitTime()
                 const code = Math.floor((Math.random() + 1) * 100000).toString()
                 await mailSender.sendEmail(emailText.toLowerCase(), code, userGuild.name, interaction, emailNotify, async (email) => {
-                    userCodes.set(interaction.user.id + userGuild.id, { code: code, email: md5hash(email), logEmail: email })
+                    userCodes.set(interaction.user.id + userGuild.id, { code: code, email: md5hash(email), logEmail: email, attempts: 0 })
                     const codePromptEmbed = createCodeSentEmbed(serverSettings.language, emailText.toLowerCase())
                     const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('openCodeModal').setLabel(getLocale(serverSettings.language, 'enterCodeButton')).setEmoji('🔑').setStyle(ButtonStyle.Success))
                     const prevVerifyPromptId = verifyPromptMessages.get(interaction.user.id)
@@ -355,7 +361,11 @@ bot.on('interactionCreate', async interaction => {
                     return
                 }
                 const userCode = userCodes.get(interaction.user.id + userGuild.id)
-                if (userCode && userCode.code === codeText) {
+                if (!userCode) {
+                    await interaction.reply({ embeds: [createSessionExpiredEmbed(true)], flags: MessageFlags.Ephemeral }).catch(() => null)
+                    return
+                }
+                if (userCode.code === codeText) {
                     const defaultRoles = serverSettings.defaultRoles || []
                     const domainRoles = serverSettings.domainRoles || {}
                     const matchingPatterns = getMatchingDomainPatterns(userCode.logEmail, Object.keys(domainRoles))
@@ -394,11 +404,23 @@ bot.on('interactionCreate', async interaction => {
                     setTimeout(() => { try { interaction.deleteReply().catch(() => {}) } catch {} try { if (sent && sent.id) interaction.webhook.deleteMessage(sent.id).catch(() => {}) } catch {} }, 20000)
                     userCodes.delete(interaction.user.id + userGuild.id)
                 } else {
-                    await interaction.reply({ embeds: [createInvalidCodeEmbed(serverSettings.language)], flags: MessageFlags.Ephemeral }).catch(() => null)
-                    const sent = await interaction.fetchReply().catch(() => null)
-                    const codePromptId = codePromptMessages.get(interaction.user.id + userGuild.id)
-                    if (codePromptId) { codePromptMessages.delete(interaction.user.id + userGuild.id); interaction.webhook.deleteMessage(codePromptId).catch(() => {}) }
-                    setTimeout(() => { try { interaction.deleteReply().catch(() => {}) } catch {} try { if (sent && sent.id) interaction.webhook.deleteMessage(sent.id).catch(() => {}) } catch {} }, 10000)
+                    userCode.attempts = (userCode.attempts || 0) + 1
+                    if (userCode.attempts >= 3) {
+                        userCodes.delete(interaction.user.id + userGuild.id)
+                        const tooManyAttemptsEmbed = new EmbedBuilder()
+                            .setTitle(getLocale(serverSettings.language, "mailFailedTitle") || "Verification Failed")
+                            .setDescription("❌ Too many incorrect attempts. Please request a new verification code.")
+                            .setColor(0xED4245)
+                        await interaction.reply({ embeds: [tooManyAttemptsEmbed], flags: MessageFlags.Ephemeral }).catch(() => null)
+                        const sent = await interaction.fetchReply().catch(() => null)
+                        const codePromptId = codePromptMessages.get(interaction.user.id + userGuild.id)
+                        if (codePromptId) { codePromptMessages.delete(interaction.user.id + userGuild.id); interaction.webhook.deleteMessage(codePromptId).catch(() => {}) }
+                        setTimeout(() => { try { interaction.deleteReply().catch(() => {}) } catch {} try { if (sent && sent.id) interaction.webhook.deleteMessage(sent.id).catch(() => {}) } catch {} }, 10000)
+                    } else {
+                        await interaction.reply({ embeds: [createInvalidCodeEmbed(serverSettings.language)], flags: MessageFlags.Ephemeral }).catch(() => null)
+                        const sent = await interaction.fetchReply().catch(() => null)
+                        setTimeout(() => { try { interaction.deleteReply().catch(() => {}) } catch {} try { if (sent && sent.id) interaction.webhook.deleteMessage(sent.id).catch(() => {}) } catch {} }, 10000)
+                    }
                 }
             })
             return

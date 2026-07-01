@@ -1,15 +1,40 @@
-FROM node:19
+# syntax=docker/dockerfile:1
 
-WORKDIR /usr/app/
+# ── Stage 1: Build / Dependency Installation ─────────────────────
+FROM node:20-bookworm-slim AS builder
 
-RUN apt-get update && apt-get install -y sqlite3 libsqlite3-dev  && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
 
-COPY . /usr/app/
+# Copy dependencies manifest
+COPY package*.json ./
 
-RUN ls /usr/app/
+# Install production dependencies cleanly (avoiding devDependencies)
+RUN npm ci --only=production
 
-RUN ls /usr/app/language
+# ── Stage 2: Runtime Production Environment ──────────────────────
+FROM node:20-bookworm-slim
 
-RUN npm install
+# Set environment to production
+ENV NODE_ENV=production
 
-CMD ["npm", "start"]
+WORKDIR /usr/app
+
+# Pre-create data/config directories and set ownership to node user
+RUN mkdir -p config data && chown -R node:node /usr/app
+
+# Copy production node_modules from the builder stage
+COPY --from=builder --chown=node:node /build/node_modules ./node_modules
+
+# Copy source code and files
+COPY --chown=node:node package.json ./
+COPY --chown=node:node src/ ./src/
+COPY --chown=node:node language/ ./language/
+
+# Run the container under the non-root 'node' user (UID 1000)
+USER node
+
+# Expose stats API port
+EXPOSE 8181
+
+# Run the sharder directly in exec form
+CMD ["node", "src/sharder.js"]

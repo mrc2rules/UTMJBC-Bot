@@ -65,17 +65,21 @@ module.exports = class ServerStats {
             } catch {}
         }
         const logLine = `${dateStr},${this.mailsSendToday},${this.mailsSendAll},${this.usersVerifiedToday},${this.usersVerifiedAll},${serverCount}\n`
-        fs.appendFileSync(this.historyFileName, logLine)
-        console.log(`Saved daily stats: ${logLine.trim()}`)
+        try {
+            await fs.promises.appendFile(this.historyFileName, logLine)
+            console.log(`Saved daily stats: ${logLine.trim()}`)
+        } catch (err) {
+            console.error(`Error saving daily stats:`, err)
+        }
     }
 
     updateFile() {
-        fs.writeFileSync(this.fileName, JSON.stringify({
+        fs.promises.writeFile(this.fileName, JSON.stringify({
             mailsSendAll: this.mailsSendAll,
             mailsSendToday: this.mailsSendToday,
             usersVerifiedAll: this.usersVerifiedAll,
             usersVerifiedToday: this.usersVerifiedToday,
             lastDate: this.lastDate.toISOString()
-        }))
+        })).catch(err => console.error('Error updating ServerStats file:', err));
     }
 }

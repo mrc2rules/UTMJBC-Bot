@@ -25,8 +25,11 @@ function escapeRegExp(str) {
 function wildcardToRegex(pattern, options = {}) {
     const { fullMatch = false, caseInsensitive = true } = options;
     
+    // Collapse consecutive * wildcards to prevent ReDoS
+    const normalizedPattern = typeof pattern === 'string' ? pattern.replace(/\*+/g, '*') : '';
+    
     // Split by * to get literal parts
-    const parts = pattern.split('*');
+    const parts = normalizedPattern.split('*');
     
     // Escape each part and join with .* (match any characters)
     const regexPattern = parts.map(part => escapeRegExp(part)).join('.*');

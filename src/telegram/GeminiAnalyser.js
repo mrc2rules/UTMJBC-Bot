@@ -108,6 +108,7 @@ Analyse the message and extract the required fields as per the strict JSON schem
             {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal:  AbortSignal.timeout(30000),
                 body: JSON.stringify({
                     systemInstruction: { parts: [{ text: systemInstruction }] },
                     contents: [

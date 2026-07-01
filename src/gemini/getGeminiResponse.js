@@ -98,7 +98,7 @@ Before answering any question, search ONLY the two allowed domains:
     } catch (err) {
         const message = err.message || "Unknown error";
         console.error("Gemini error:", message);
-        return `⚠️  # Error\n${message}`;
+        return `⚠️  # Error\nAn error occurred while communicating with the AI service. Please try again later.`;
     }
 }
 

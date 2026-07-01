@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+config/bot.db
+config/ServerStatsHistory.log
+data/
+*.log
+.env
+src/.env
+Dockerfile*
+docker-compose*
+scripts/
+site/
