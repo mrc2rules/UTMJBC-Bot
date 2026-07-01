@@ -21,8 +21,7 @@
     "nodemailer": "^7.0.3",
     "nodemailer-smtp-transport": "^2.7.4",
     "sqlite3": "^5.1.7",
-    "telegram": "^2.26.22",
-    "topgg-autoposter": "^2.0.2"
+    "telegram": "^2.26.22"
   },
   "devDependencies": {
     "process": "^0.11.10"
