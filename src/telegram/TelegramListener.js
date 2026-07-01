@@ -45,7 +45,9 @@ async function start(discordClient) {
         state.telegramClient = telegramClient;
 
         logInfo('[TelegramListener] Connected to Telegram!');
-        logInfo('[TelegramListener] Save this session string to config.telegramSession:\n' + telegramClient.session.save());
+        if (!config.telegramSession) {
+            logInfo('[TelegramListener] Save this session string to config.telegramSession:\n' + telegramClient.session.save());
+        }
     } catch (err) {
         if (err.message && err.message.includes('AUTH_KEY_DUPLICATED')) {
             logError('[TelegramListener] CRITICAL: Telegram error 406 AUTH_KEY_DUPLICATED. Another bot instance or process is currently running with the same telegramSession! Bot startup will continue without Telegram.');
