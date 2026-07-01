@@ -1,12 +1,13 @@
 require('dotenv').config();
 const Discord = require('discord.js');
-let token = process.env.DISCORD_TOKEN || process.env.TOKEN;
-let clientId = process.env.CLIENT_ID || process.env.DISCORD_CLIENT_ID;
+let token, clientId;
 try {
     const config = require('../config/config.json');
-    if (!token) token = config.token;
-    if (!clientId) clientId = config.clientId;
+    token = config.token;
+    clientId = config.clientId;
 } catch {}
+if (!token) token = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
+if (!clientId) clientId = process.env.CLIENT_ID || process.env.DISCORD_CLIENT_ID;
 const database = require('./database/Database.js')
 const {stdin, stdout} = require('process')
 const readline = require('readline')
