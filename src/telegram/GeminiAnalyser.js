@@ -83,10 +83,23 @@ Analyse the message and extract the required fields as per the strict JSON schem
     const schema = {
         type: 'object',
         properties: {
-            isEvent:         { type: 'boolean' },
-            type:            { type: 'string' },
-            topic:           { type: 'string' },
-            title:           { type: 'string' },
+            isEvent:         { type: 'boolean', description: 'Whether the message announces an actionable event.' },
+            type:            { 
+                type: 'string', 
+                enum: [
+                    "Club Activity", "Club Recruitment", "Club Announcement", 
+                    "Competition / Hackathon", "Talk / Seminar / Workshop", 
+                    "Faculty / Department Event", "University-wide Event", 
+                    "External / Collaboration Event"
+                ],
+                description: 'The exact category of the event or announcement.'
+            },
+            topic:           { 
+                type: 'string',
+                enum: ["Tech/Coding", "Sports", "Arts/Culture", "Business/Career", "Self-Dev", "Community/Volunteer", "Academic/Science", "Other"],
+                description: 'The primary topic category.'
+            },
+            title:           { type: 'string',  description: 'Descriptive English title of the event.' },
             date:            { type: 'string',  nullable: true },
             startDate:       { type: 'string',  nullable: true },
             eventEndDate:    { type: 'string',  nullable: true },
@@ -111,6 +124,12 @@ Analyse the message and extract the required fields as per the strict JSON schem
                 signal:  AbortSignal.timeout(30000),
                 body: JSON.stringify({
                     systemInstruction: { parts: [{ text: systemInstruction }] },
+                    safetySettings: [
+                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
+                    ],
                     contents: [
                         // Few-shot example 1: English event
                         {
@@ -184,7 +203,8 @@ Analyse the message and extract the required fields as per the strict JSON schem
                         { role: 'user', parts: [{ text: promptText }] }
                     ],
                     generationConfig: {
-                        temperature:      0.5,
+                        temperature:      0.1,
+                        maxOutputTokens:  1024,
                         responseMimeType: 'application/json',
                         responseSchema:   schema
                     }
@@ -199,8 +219,9 @@ Analyse the message and extract the required fields as per the strict JSON schem
 
         const data = await res.json();
         const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text || '{"isEvent":false}';
+        const cleanRaw = raw.replace(/```(?:json)?|```/g, '').trim();
 
-        const parsed    = JSON.parse(raw);
+        const parsed    = JSON.parse(cleanRaw);
         parsed._isMalay = isMalay;
 
         // Post-processing: unescape any literal \n sequences that survived JSON

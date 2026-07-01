@@ -2,103 +2,88 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-function addInlineCitations(response) {
-    let text = response.text();
-    const supports = response.candidates?.[0]?.groundingMetadata?.groundingSupports;
+function formatCitationsAndSources(response) {
+    let text = response.text() || "";
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
 
-    if (!supports?.length || !chunks?.length) return text;
+    // Strip out any hallucinated manual "Sources:" section from the LLM if present
+    text = text.replace(/(?:\n|^)\s*\*\*Sources:\*\*[\s\S]*$/i, '').trim();
 
-    const sorted = [...supports].sort(
-        (a, b) => (b.segment?.endIndex ?? 0) - (a.segment?.endIndex ?? 0)
-    );
-
-    for (const support of sorted) {
-        const endIndex = support.segment?.endIndex;
-        if (endIndex === undefined || !support.groundingChunkIndices?.length) continue;
-
-        const citationLinks = support.groundingChunkIndices
-            .map(i => {
-                const uri = chunks[i]?.web?.uri;
-                if (!uri) return null;
-                const title = chunks[i]?.web?.title || `${i + 1}`;
-                if (uri.includes('utm.my') || uri.includes('utm.gitbook.io')) {
-                    return `[${title}](${uri})`;
-                }
-                return `[${i + 1}](${uri})`;
-            })
-            .filter(Boolean);
-
-        if (citationLinks.length > 0) {
-            const citation = ` ${citationLinks.join(" ")}`;
-            text = text.slice(0, endIndex) + citation + text.slice(endIndex);
-        }
+    if (!chunks || !chunks.length) {
+        return text;
     }
 
-    return text;
+    const seenUris = new Set();
+    const sourceLines = [];
+
+    chunks.forEach((chunk, idx) => {
+        const uri = chunk.web?.uri;
+        const title = chunk.web?.title || `Source ${idx + 1}`;
+        if (uri && !seenUris.has(uri)) {
+            seenUris.add(uri);
+            sourceLines.push(`${sourceLines.length + 1}. [${title}](${uri})`);
+        }
+    });
+
+    if (sourceLines.length === 0) {
+        return text;
+    }
+
+    const sourcesSection = `\n\n**Sources:**\n` + sourceLines.join("\n");
+
+    // Ensure combined text does not exceed Discord's 2000 character hard limit
+    if (text.length + sourcesSection.length > 1950) {
+        const maxBodyLen = 1950 - sourcesSection.length - 10;
+        text = text.slice(0, maxBodyLen).trim() + "...";
+    }
+
+    return text + sourcesSection;
 }
 
 async function getGeminiResponse(prompt) {
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
+            generationConfig: {
+                temperature: 0.2
+            },
             systemInstruction: `
-You are an AI assistant designed to help users find and understand information from two sources:
-[https://utm.gitbook.io/](https://utm.gitbook.io/) – community-maintained guides, notes, references, and student-written documentation.
-[https://utm.my/](https://utm.my/) – Official Universiti Teknologi Malaysia website containing authoritative information such as academic regulations, faculty details, services, and announcements.
-And any relevant subdomains.
+You are an AI assistant designed to help users find and understand information from two official sources:
+- [https://utm.gitbook.io/](https://utm.gitbook.io/) – community-maintained guides, notes, references, and student documentation.
+- [https://utm.my/](https://utm.my/) – Official Universiti Teknologi Malaysia website containing authoritative academic regulations, faculty details, services, and announcements.
 
-# Objectives
-- Provide clear, accurate, and concise answers using information from the sources above.
-- When relevant, guide users to the exact section or page that can answer their question.
-- If the requested information does not exist on either site, state that clearly and provide the closest alternative guidance.
+<objectives>
+- Provide clear, accurate, up-to-date, and concise answers grounded in the two sources above.
+- Guide users to exact sections or policies whenever applicable.
+- If requested information does not exist on either site, state clearly that it is unavailable.
+</objectives>
 
-# Rules and Behaviours
-- Use proper Markdown formatting
-- Use utm.gitbook.io for community explanations, tutorials, and student resources.
-- Use utm.my for verified, official details and policies.
-- Do not invent information, policies, staff names, or internal procedures that are not publicly available.
-- Keep responses factual, neutral, and helpful.
-- Do always include your relevant sources URL, at the end of the message using markdown.
-- IMPORTANT: When citing sources, use this exact format:
-
-**Sources:**
-1. [Page Title](full URL)
-2. [Page Title](full URL)
-
-- Do not claim to be an official representative of UTM.
-
-# What the Assistant Can Do
-- Summarize content they would find on either site.
-- Provide step-by-step instructions for common tasks covered by the GitBook or the official site.
-- Suggest where to find additional information when the answer is not directly available.
-
-# What the Assistant Must Not Do
-- Do not generate unverified policies or details.
-- Do not fabricate names, contact information, or administrative procedures.
-- Do not reference or rely on external sources outside utm.gitbook.io and utm.my.
-- Do not speculate beyond the available information.
-- Do not pretend to be official.
-- Do NOT MENTION University of Toronto Mississauga (UTM) AT ALL. This is forbidden
-- Do NOT GO OVER 1000 CHARACTERS IN YOUR RESPONSE
-- Do NOT speak about anything unrelated to Universiti Teknologi Malaysia, whatever the case may be.
-
-Before answering any question, search ONLY the two allowed domains:
-- utm.gitbook.io
-- utm.my
-- any subdomains
-`,
+<rules>
+- When invoking Google Search tool, always append domain filters like \`site:utm.my OR site:utm.gitbook.io\` to search queries.
+- Keep responses concise, factual, neutral, and strictly under 1,300 characters across 2-3 short paragraphs.
+- Do NOT generate a manual "**Sources:**" list at the end of your response. The system automatically verifies and appends all authoritative source links.
+- Do NOT invent information, policies, staff names, or procedures.
+- Do NOT reference external sources outside utm.gitbook.io and utm.my.
+- Do NOT mention University of Toronto Mississauga (UTM). Speak ONLY about Universiti Teknologi Malaysia.
+</rules>`,
             tools: [{ googleSearch: {} }]
         });
 
-        const result = await model.generateContent(prompt);
-        const text = addInlineCitations(result.response);
+        // 20-second timeout protection against stuck Google Search operations
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Request timed out after 20 seconds")), 20000)
+        );
 
-        return text;
+        const result = await Promise.race([
+            model.generateContent(prompt),
+            timeoutPromise
+        ]);
+
+        return formatCitationsAndSources(result.response);
     } catch (err) {
         const message = err.message || "Unknown error";
         console.error("Gemini error:", message);
-        return `⚠️  # Error\nAn error occurred while communicating with the AI service. Please try again later.`;
+        return `⚠️ # Error\nAn error occurred while communicating with the AI service (${message}). Please try again later.`;
     }
 }
 
