@@ -160,7 +160,7 @@ async function registerAllGuilds(bot) {
 bot.once('clientReady', async () => {
     const isPrimary = !bot.shard || bot.shard.ids.includes(0)
     if (isPrimary) {
-        serverStatsAPI.app.listen(serverStatsAPI.port, () => {
+        serverStatsAPI.app.listen(serverStatsAPI.port, '0.0.0.0', () => {
             console.log(`App listening on port ${serverStatsAPI.port}!`)
         })
 	startTelegram(bot);

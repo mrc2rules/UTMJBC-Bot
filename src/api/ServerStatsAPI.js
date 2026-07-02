@@ -203,7 +203,7 @@ class ServerStatsAPI {
     start() {
         if (this.started) return;
         this.started = true;
-        this.app.listen(this.port, () => {
+        this.app.listen(this.port, '0.0.0.0', () => {
             console.log(`App listening on port ${this.port}!`);
         });
     }

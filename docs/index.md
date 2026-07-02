@@ -37,7 +37,7 @@ image: https://media.discordapp.net/attachments/1423008246691659898/152135224877
 
 ## Core Capabilities
 
-UTMJBC Bot is a multi-purpose architecture designed specifically for university Discord communities. It combines two robust subsystems under a single sharded process:
+UTMJBC Bot is a resilient architecture designed specifically for university Discord communities. It combines three robust subsystems under a single sharded process protected by a centralized **AIGateway Circuit Breaker**:
 
 === ":material-email-check: Email Verification"
 
@@ -53,7 +53,8 @@ UTMJBC Bot is a multi-purpose architecture designed specifically for university 
     Monitors public campus Telegram broadcasts and syndicates rich, structured event cards directly into Discord forum threads.
 
     - **Multi-Layer Deduplication:** Filters broadcast noise using a 4-tier pipeline (Message ID → MD5 Content Hash → 64-bit SimHash near-duplicate detection → Title Hash).
-    - **Gemini 2.5 Flash AI:** Automatically classifies posts, extracts key metadata (date, location, cost, merit points, registration links), and translates Malay announcements into English.
+    - **Gemini 2.5 Flash via `@google/genai`:** Automatically classifies posts, extracts key metadata (date, location, cost, merit points, registration links), and translates Malay announcements into English.
+    - **Circuit Breaker Resilience:** Automated timeout recovery and rate-limit circuit breaking via `AIGateway`.
     - **Automated Lifecycle:** Automatically locks and archives forum threads once event end-dates have passed.
 
 === ":material-robot: Grounded AI Assistant"
@@ -68,11 +69,33 @@ UTMJBC Bot is a multi-purpose architecture designed specifically for university 
 
 ## Quick Navigation
 
-| Resource | Purpose | Link |
-|----------|---------|------|
-| :material-github: **Source Code** | View repository, report bugs, contribute | [mrc2rules/UTMJBC-Bot](https://github.com/mrc2rules/UTMJBC-Bot) |
-| :material-chat: **Discord Server** | Join the official UTM Johor Bahru Community | [discord.gg/vuGTVyFgck](https://discord.gg/vuGTVyFgck) |
-| :material-book-open-page-variant: **Community Guide** | Student guides, notes, and academic references | [utm.gitbook.io](https://utm.gitbook.io/) |
+<div class="grid cards" markdown>
+
+-   :material-github:{ .lg .middle } **Source Repository**
+
+    ---
+
+    Explore the open-source codebase, report issues, or contribute new features to the bot.
+
+    [:octicons-arrow-right-24: View GitHub Repository](https://github.com/mrc2rules/UTMJBC-Bot)
+
+-   :material-chat:{ .lg .middle } **Community Discord**
+
+    ---
+
+    Join the Universiti Teknologi Malaysia (UTM) Johor Bahru Community Discord server.
+
+    [:octicons-arrow-right-24: Join Discord Server](https://discord.gg/vuGTVyFgck)
+
+-   :material-book-open-page-variant:{ .lg .middle } **Student Guidebook**
+
+    ---
+
+    Access comprehensive student guides, academic notes, and campus resources.
+
+    [:octicons-arrow-right-24: Read utm.gitbook.io](https://utm.gitbook.io/)
+
+</div>
 
 ---
 

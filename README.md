@@ -26,105 +26,38 @@
 
 ---
 
-## 📖 About
+## About
 
-The official bot for the **UTMJBC** Discord server. It has two independent features:
+The official bot for the **UTMJBC** Discord server. It delivers three core features:
 
-1. **Email Verification** — students enter their institutional email, receive a 6-digit OTP, and are automatically assigned Discord roles based on their domain.
-2. **Telegram Event Scraper** — monitors public UTM Telegram channels, classifies messages with Gemini AI, deduplicates them, and publishes structured event threads to a Discord forum channel.
+1. **Email Verification** - Students enter their official university email (`@graduate.utm.my` or `@utm.my`), receive a secure 6-digit OTP via nodemailer, and are automatically assigned Discord roles based on domain verification.
+2. **Telegram Event Scraper** - Monitors public UTM Telegram channels and utilizes **Gemini models** via Google's modern `@google/genai` SDK to intelligently classify campus events. 
+\
+\
+ Message's are passed through multilayer filter to prevent duplication. Event details are extracted via structured JSON mapping, and then published in a Discord forum channel. If required, the posts are also translated from Malay to English.
+3. **Grounded Campus Assistant (`/askai`)** - An interactive Discord AI assistant that answers student queries strictly grounded in authoritative institutional sources (`utm.my` and `utm.gitbook.io`), with sources linked at the end of each message.
 
-> ⚠️ **Disclaimer:** UTMJBC is an independent student-run community and is **not affiliated with or endorsed by Universiti Teknologi Malaysia (UTM)**.
+### Reliability & Architecture Highlights
+- **Unified AIGateway & Circuit Breaker**: All AI interactions pass through a centralized service wrapper (`AIGateway`) with automated `Promise.race` timeouts (20–30s) and a circuit breaker that pauses requests after repeated API outages.
+- **Decoupled Prompt Management**: System prompts and few-shot extraction schemas are decoupled into dedicated modules (`src/prompts/`), keeping core application logic clean.
+- **Zero-Build Persistence**: Uses pre-compiled GLIBC binary distributions of `sqlite3` (`^5.1.7`) for seamless deployment across shared Linux servers and container environments.
+
+> [!NOTE]
+> UTMJBC is an independent student-run community and is **not affiliated with or endorsed by Universiti Teknologi Malaysia (UTM)**.
+
+---
+## Documentation
+
+Full documentation is available at the project docs site:
+
+- [Commands Reference](docs/commands.md)
+- [Self Hosting Guide](docs/self-hosting.md)
+- [Architecture Overview](docs/architecture.md)
+- [Developer API Reference](docs/api-reference.md)
 
 ---
 
-## 📝 Commands
-
-### 👤 User Commands
-
-| Command | Description |
-|---------|-------------|
-| `/verify` | Start the email verification process |
-| `/data delete-user` | Delete your verification data and remove your verified status |
-| `/askai <question>` | Ask an AI question about UTM (grounded in utm.my + utm.gitbook.io) |
-
-### 👥 Role Configuration
-
-| Command | Description |
-|---------|-------------|
-| `/role add <role>` | Add a default role given to all verified users |
-| `/role remove <role>` | Remove a role from the default roles list |
-| `/role list` | View all default roles |
-| `/role unverified [role]` | Set or view the optional role for unverified members |
-
-### 🎭 Domain-Specific Roles
-
-| Command | Description |
-|---------|-------------|
-| `/domainrole add <domain> <role>` | Add a role for a specific email domain |
-| `/domainrole remove <domain> <role>` | Remove a role from a domain |
-| `/domainrole list` | View all domain-role mappings |
-| `/domainrole clear <domain>` | Remove all roles for a domain |
-
-### 📧 Domain Management
-
-| Command | Description |
-|---------|-------------|
-| `/domain add <domains>` | Add allowed email domains (supports `*` wildcard) |
-| `/domain remove <domains>` | Remove allowed domains |
-| `/domain list` | View all allowed domains |
-| `/domain clear` | Remove all allowed domains |
-
-### 🚫 Blacklist Management
-
-| Command | Description |
-|---------|-------------|
-| `/blacklist add <patterns>` | Block email patterns (supports `*` wildcard) |
-| `/blacklist remove <patterns>` | Unblock patterns |
-| `/blacklist list` | View all blacklisted entries |
-| `/blacklist clear` | Remove all blacklist entries |
-
-### ⚙️ Settings
-
-| Command | Description |
-|---------|-------------|
-| `/settings language <lang>` | Change the bot's language |
-| `/settings log-channel [channel]` | Set or disable the verification log channel |
-| `/settings verify-message [message]` | Set or reset a custom message in verification emails |
-| `/settings auto-verify <enable>` | Auto-prompt new members to verify on join |
-| `/settings auto-unverified <enable>` | Auto-assign unverified role to new members |
-
-### 🛡️ Moderation & Setup
-
-| Command | Description |
-|---------|-------------|
-| `/button <channel> <buttontext>` | Create a verification button embed in a channel |
-| `/manualverify <user> <email>` | Manually verify a user without email confirmation |
-| `/set_error_notify` | Configure where error notifications are sent |
-
-### 📡 Telegram Scraper
-
-| Command | Description |
-|---------|-------------|
-| `/scrape [run/start/stop]` | Control the event scraper |
-| `/addchannel <channel_id>` | Add a Telegram channel to monitor |
-| `/removechannel <channel_id>` | Stop monitoring a channel |
-| `/listchannels` | View all monitored channels |
-| `/tgblacklist <action> [keyword]` | Manage the scraper keyword blacklist |
-
-### 📊 Information
-
-| Command | Description |
-|---------|-------------|
-| `/status` | View bot configuration, statistics, and setup issues |
-| `/help` | Show setup instructions and command overview |
-
-> ⚠️ Most commands require Administrator permissions.
-
-**Important:** The bot role must be **higher** in the Discord role hierarchy than the verified and unverified roles, otherwise role assignment will fail.
-
----
-
-## 🐳 Self Hosting
+## Self Hosting
 
 ### Docker (Recommended)
 
@@ -200,7 +133,8 @@ npm start
 | `discordEventForumId` | Discord forum channel ID where events are posted |
 | `GEMINI_API_KEY` | *(env var)* Google AI API key for Gemini features |
 
-> 💡 **Gmail:** Create an [App Password](https://support.google.com/accounts/answer/185833) and set `isGoogle: true`.
+> [NOTE!] 
+> **Gmail:** Create an [App Password](https://support.google.com/accounts/answer/185833) and set `isGoogle: true`.
 
 ### Debugging
 
@@ -208,18 +142,7 @@ Type `email` in the console to toggle verbose SMTP error logging.
 
 ---
 
-## 📚 Documentation
-
-Full documentation is available at the project docs site:
-
-- [Commands Reference](docs/commands.md)
-- [Self Hosting Guide](docs/self-hosting.md)
-- [Architecture Overview](docs/architecture.md)
-- [Developer API Reference](docs/api-reference.md)
-
----
-
-## 👥 Contributors
+## Contributors
 
 ### UTMJBC Development
 - **mrc2rules** — [GitHub](https://github.com/mrc2rules)

@@ -37,7 +37,11 @@ markdown_extensions:
   - md_in_html
   - tables
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.highlight:
@@ -53,7 +57,12 @@ nav:
   - Commands: 'commands.md'
   - Self Hosting: 'self-hosting.md'
   - Architecture: 'architecture.md'
-  - API Reference: 'api-reference.md'
+  - API Reference:
+      - Overview: 'api-reference.md'
+      - AI Subsystem: 'api/ai.md'
+      - Telegram Pipeline: 'api/telegram.md'
+      - Database & Telemetry: 'api/database.md'
+      - Utilities & Localization: 'api/utilities.md'
   - Statistics: 'statistics.md'
   - Status: 'status.md'
   - Contributing: 'contributing.md'

@@ -11,28 +11,21 @@ UTMJBC Bot is designed as a modular, sharded Discord application combining an id
 
 ## :material-sitemap: High-Level Process Topology
 
-```text
-                     ┌─────────────────────────────┐
-                     │        sharder.js           │
-                     │  Discord ShardingManager     │
-                     │  (auto-shards, respawns)     │
-                     └────────────┬────────────────┘
-                                  │ spawns
-                     ┌────────────▼────────────────┐
-                     │        EmailBot.js           │
-                     │  Main Discord bot process    │
-                     │  • Interaction handler       │
-                     │  • Event listeners           │
-                     │  • Command loader            │
-                     └──┬──────────┬──────────┬────┘
-                        │          │          │
-           ┌────────────▼──┐  ┌────▼────┐  ┌─▼──────────────┐
-           │  Email System  │  │ Gemini  │  │  Telegram Pipe │
-           │  MailSender    │  │ Query   │  │  TelegramListener│
-           │  (nodemailer)  │  │ (/askai)│  │  → Scraper      │
-           └────────────────┘  └─────────┘  │  → GeminiAnalyser│
-                                             │  → DiscordPublisher│
-                                             └────────────────────┘
+```mermaid
+graph TD
+    classDef mainProcess fill:#3a001c,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef subsystem fill:#2b2b2b,stroke:#888,stroke-width:1px,color:#eee;
+
+    A["sharder.js (Discord ShardingManager)"]:::mainProcess -->|spawns| B["EmailBot.js (Main Discord process)"]:::mainProcess
+    B --> C["Email System (MailSender)"]:::subsystem
+    B --> D["Gemini Query (/askai)"]:::subsystem
+    B --> E["Telegram Pipe (TelegramListener)"]:::subsystem
+
+    subgraph Telegram Pipeline
+        E --> F["Scraper"]:::subsystem
+        E --> G["GeminiAnalyser"]:::subsystem
+        E --> H["DiscordPublisher"]:::subsystem
+    end
 ```
 
 ---
@@ -47,12 +40,14 @@ UTMJBC Bot is designed as a modular, sharded Discord application combining an id
 | `src/mail/MailSender.js` | SMTP email dispatch client using `nodemailer`. Supports custom templates and OAuth2/App passwords. |
 | `src/telegram/TelegramListener.js` | MTProto Telegram client using GramJS. Orchestrates background cron schedules (`startScrapeCron`). |
 | `src/telegram/Scraper.js` | Core scraping engine. Iterates messages through deduplication gates, calls Gemini AI, and dispatches forum threads. |
-| `src/telegram/GeminiAnalyser.js` | REST client wrapper around Google Gemini 2.5 Flash API for structured event extraction and translation. |
+| `src/telegram/GeminiAnalyser.js` | Event classification logic delegating to `AIGateway` for Gemini 2.5 Flash structured JSON extraction. |
 | `src/telegram/DiscordPublisher.js` | Formats embeds, creates forum threads, generates Google Calendar links, and tracks thread IDs. |
 | `src/telegram/MessageChecker.js` | Cryptographic fingerprinting tools: MD5 content hashing, 64-bit SimHash near-duplicate detection, title window lookups. |
+| `src/services/AIGateway.js` | Centralized AI service wrapper around Google's `@google/genai` SDK with automatic timeouts and Circuit Breaker logic. |
+| `src/prompts/` | Decoupled prompt template modules (`utmAssistantPrompt.js`, `eventExtractorPrompt.js`). |
 | `src/database/Database.js` | SQLite singleton managing `bot.db` (guild settings, email user records, verification metrics). |
 | `src/shared/db.js` | SQLite singleton managing `telegram_events.db` (processed message IDs, deduplication tables). |
-| `src/gemini/getGeminiResponse.js` | Grounded search handler for the `/askai` command. Restricts queries to university web domains. |
+| `src/gemini/getGeminiResponse.js` | Grounded search handler for `/askai`, delegating to `AIGateway` with strictly scoped domain search filters. |
 | `src/api/ServerStatsAPI.js` | Embedded Express HTTP server on port `8181` exposing `/stats/current` and `/stats/history` endpoints. |
 
 ---
@@ -82,31 +77,34 @@ To prevent thread contention and isolate domain responsibilities, the bot mainta
 
 ## :material-shield-check: Email Verification Lifecycle
 
-```text
-User initiates /verify or clicks Verification Embed Button
-                           │
-                           ▼
-          showEmailModal() — Renders Discord Modal
-                           │
-                           ▼ (User submits address)
-          Email Modal Handler (EmailBot.js)
-             1. Verify guild configuration readiness
-             2. emailIsBlacklisted() → Reject if blocked
-             3. emailMatchesDomains() → Reject if domain invalid
-             4. UserTimeout → Enforce anti-spam cooldown
-             5. MailSender.sendEmail() → Dispatch 6-digit OTP
-             6. Cache { code, emailHash } in transient memory map
-                           │
-                           ▼ (User clicks "Enter Code" button)
-          Code Modal Handler (EmailBot.js)
-             1. Fetch cached OTP for user+guild composite key
-             2. Validate entered code
-             3. On Success:
-                a. Resolve domain roles + default roles
-                b. Check database for existing email claims
-                c. Persist user hash in SQLite database
-                d. Assign roles via Discord Guild Member API
-                e. Dispatch audit log embed to designated log channel
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Bot as EmailBot.js
+    participant Mail as MailSender.js
+    participant DB as SQLite (bot.db)
+
+    User->>Bot: Initiates /verify or clicks Button
+    Bot->>User: Renders Email Input Modal
+    User->>Bot: Submits email address
+    Note over Bot: Verify guild configuration
+    Note over Bot: emailIsBlacklisted() check
+    Note over Bot: emailMatchesDomains() check
+    Note over Bot: Enforce anti-spam timeout
+    Bot->>Mail: sendEmail()
+    Mail-->>User: Dispatches 6-digit OTP
+    Bot->>Bot: Cache OTP & emailHash in memory
+    User->>Bot: Clicks 'Enter Code' & submits OTP
+    Note over Bot: Validate entered OTP code
+    alt On Success
+        Bot->>DB: Persist user MD5 hash
+        Bot->>Bot: Resolve roles
+        Bot-->>User: Assign roles via Discord API
+        Bot-->>Bot: Dispatch audit log
+    else On Failure
+        Bot-->>User: Render error state
+    end
 ```
 
 ---
@@ -121,3 +119,36 @@ The Telegram pipeline applies a strict 4-stage filter before invoking AI process
 | **2. MD5 Content Hash** | Hex digest of normalized text content | Cross-channel lifetime |
 | **3. SimHash Distance** | 64-bit locality-sensitive FNV-1a fingerprint | Cross-channel (Hamming distance $\le 5$ bits) |
 | **4. Title Window** | Normalized Gemini title comparison | Cross-channel within 14-day window |
+
+---
+
+## :material-brain: AI Gateway Subsystem & Resilience Layer
+
+All interactions with Google's generative AI infrastructure pass through the centralized `AIGateway` adapter layer (`src/services/AIGateway.js`), utilizing the modern `@google/genai` SDK.
+
+```mermaid
+graph LR
+    subgraph Feature Handlers
+        A["getGeminiResponse (/askai)"]
+        B["GeminiAnalyser (Scraper)"]
+    end
+
+    subgraph Gateway Adapter
+        C["AIGateway.js"]
+    end
+
+    subgraph External AI
+        D["Google Gemini API (gemini-2.5-flash)"]
+    end
+
+    A -->|Calls| C
+    B -->|Calls| C
+    C -->|1. SDK Init| D
+    C -->|2. Promise.race Timeout| D
+    C -->|3. Circuit Breaker Guard| D
+```
+
+### Key Architectural Safeguards
+1. **Circuit Breaker Pattern**: To protect the bot from rate-limit loops during upstream Google outages (`429 Too Many Requests` or `503 Service Unavailable`), `AIGateway` maintains an internal error tracker. If 5 consecutive requests fail, the circuit trips open for **5 minutes**, immediately rejecting outbound calls without consuming CPU cycles or flooding log files.
+2. **Decoupled Prompt Management**: System instructions and multi-line few-shot extraction rules are decoupled from execution logic into dedicated template modules inside `src/prompts/` (`utmAssistantPrompt.js` and `eventExtractorPrompt.js`).
+3. **Pre-Parse Code Fence Sanitization**: LLMs occasionally wrap structured JSON outputs inside markdown code blocks (e.g., ` ```json ... ``` `). The pipeline runs pre-parse regex stripping before passing payload strings to `JSON.parse()`, preventing runtime parsing crashes.

@@ -66,72 +66,79 @@ Create a `config/config.json` file in the project root directory.
 
 ---
 
-## :material-docker: Deployment via Docker (Recommended)
+## :material-rocket-launch: Deployment Options
 
-Using Docker ensures all system dependencies and SQLite persistence layers are isolated and reliable.
+Choose between our recommended isolated Docker container or manual Node.js installation:
 
-### 1. Initialize Directory & Volumes
+=== ":material-docker: Docker Deployment (Recommended)"
 
-```bash title="Terminal"
-mkdir utmjbc-bot && cd utmjbc-bot
-mkdir config data
-```
+    Using Docker ensures all system dependencies and SQLite persistence layers are isolated and reliable.
 
-### 2. Create `docker-compose.yml`
+    ### 1. Initialize Directory & Volumes
 
-```yaml title="docker-compose.yml"
-version: '3.8'
-services:
-  utmjbc-bot:
-    image: ghcr.io/mrc2rules/utmjbc-bot:latest
-    environment:
-      - GEMINI_API_KEY=your_gemini_key_here
-      - PORT=8181
-    volumes:
-      - ./config:/usr/app/config
-      - ./data:/usr/app/data
-    ports:
-      - "8181:8181"
-    restart: unless-stopped
-```
+    ```bash title="Terminal"
+    mkdir utmjbc-bot && cd utmjbc-bot
+    mkdir config data
+    ```
 
-### 3. Launch Container
+    ### 2. Create `docker-compose.yml`
 
-```bash title="Terminal"
-docker compose up -d
-docker compose logs -f
-```
+    ```yaml title="docker-compose.yml"
+    version: '3.8'
+    services:
+      utmjbc-bot:
+        image: ghcr.io/mrc2rules/utmjbc-bot:latest
+        environment:
+          - GEMINI_API_KEY=your_gemini_key_here
+          - PORT=8181
+        volumes:
+          - ./config:/usr/app/config
+          - ./data:/usr/app/data
+        ports:
+          - "8181:8181"
+        restart: unless-stopped
+    ```
 
-### Bootstrapping Telegram Authentication
+    ### 3. Launch Container
 
-When starting for the first time with an empty `"telegramSession"`, the bot will prompt for login in the container logs:
+    ```bash title="Terminal"
+    docker compose up -d
+    docker compose logs -f
+    ```
 
-```text title="Docker Logs output"
-[TelegramListener] Save this session string to config.telegramSession:
-1BVtsOKABu...
-```
+    #### Bootstrapping Telegram Authentication
 
-Copy the printed session string, paste it into `config/config.json` under `"telegramSession"`, and run `docker compose restart`. Future starts will skip interactive authentication.
+    When starting for the first time with an empty `"telegramSession"`, the bot will prompt for login in the container logs:
 
----
+    ```text title="Docker Logs output"
+    [TelegramListener] Save this session string to config.telegramSession:
+    1BVtsOKABu...
+    ```
 
-## :material-console: Manual Installation
+    Copy the printed session string, paste it into `config/config.json` under `"telegramSession"`, and run `docker compose restart`. Future starts will skip interactive authentication.
 
-```bash title="Terminal"
-git clone https://github.com/mrc2rules/UTMJBC-Bot.git
-cd UTMJBC-Bot
+=== ":material-console: Manual Installation"
 
-# Install Node dependencies
-npm install
+    **Requirements:** Node.js v18+ (Linux, Windows, or macOS).
 
-# Prepare config
-cp config/config.json.example config/config.json
-nano config/config.json
+    ```bash title="Terminal"
+    git clone https://github.com/mrc2rules/UTMJBC-Bot.git
+    cd UTMJBC-Bot
 
-# Export API key and run
-export GEMINI_API_KEY="your_api_key_here"
-npm start
-```
+    # Install Node dependencies (uses precompiled GLIBC sqlite3 binaries)
+    npm install
+
+    # Prepare config
+    cp config/config.json.example config/config.json
+    nano config/config.json
+
+    # Export API key and run
+    export GEMINI_API_KEY="your_api_key_here"
+    npm start
+    ```
+
+    !!! tip "Zero-Build SQLite Persistence"
+        Our `package.json` specifies `sqlite3@^5.1.7` which downloads pre-compiled native GLIBC binaries during `npm install`. You do not need `build-essential` or Python compilation build chains when deploying to standard Linux shared hosts (e.g., Alwaysdata, Ubuntu LTS, Debian).
 
 ---
 
