@@ -1,11 +1,20 @@
 const aiGateway = require("../services/AIGateway");
 const utmAssistantPrompt = require("../prompts/utmAssistantPrompt");
 const { logError } = require("../shared/logger");
+const database = require("../database/Database");
 
-async function getGeminiResponse(prompt) {
+async function getGeminiResponse(prompt, guildId = null) {
     try {
+        let model = "gemini-2.5-flash";
+        if (guildId) {
+            const settings = await new Promise(resolve => database.getServerSettings(guildId, resolve));
+            if (settings && settings.chatbotModel) {
+                model = settings.chatbotModel;
+            }
+        }
+
         const response = await aiGateway.generateContent({
-            model: "gemini-2.5-flash",
+            model: model,
             contents: prompt,
             systemInstruction: utmAssistantPrompt,
             temperature: 0.2,

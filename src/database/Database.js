@@ -126,6 +126,12 @@ class Database {
                 }
             })
         })
+        this.runMigration(12, () => {
+            this.db.run("ALTER TABLE guilds ADD eventForumId TEXT DEFAULT ''")
+            this.db.run("ALTER TABLE guilds ADD spamReportChannelId TEXT DEFAULT ''")
+            this.db.run("ALTER TABLE guilds ADD chatbotModel TEXT DEFAULT 'gemini-2.5-flash'")
+            this.db.run("ALTER TABLE guilds ADD scraperModel TEXT DEFAULT 'gemini-2.5-flash'")
+        })
     }
 
     runMigration(version, migration) {
@@ -156,8 +162,8 @@ class Database {
 
     updateServerSettings(guildID, serverSettings) {
         this.db.run(
-            "INSERT OR REPLACE INTO guilds (guildid, domains, blacklist, verifiedrole, unverifiedrole, channelid, messageid, language, autoVerify, autoAddUnverified, verifyMessage, logChannel, errorNotifyType, errorNotifyTarget, defaultRoles, domainRoles) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [guildID, JSON.stringify(serverSettings.domains), JSON.stringify(serverSettings.blacklist), serverSettings.verifiedRoleName, serverSettings.unverifiedRoleName, serverSettings.channelID, serverSettings.messageID, serverSettings.language, serverSettings.autoVerify, serverSettings.autoAddUnverified, serverSettings.verifyMessage, serverSettings.logChannel, serverSettings.errorNotifyType, serverSettings.errorNotifyTarget, JSON.stringify(serverSettings.defaultRoles), JSON.stringify(serverSettings.domainRoles)])
+            "INSERT OR REPLACE INTO guilds (guildid, domains, blacklist, verifiedrole, unverifiedrole, channelid, messageid, language, autoVerify, autoAddUnverified, verifyMessage, logChannel, errorNotifyType, errorNotifyTarget, defaultRoles, domainRoles, eventForumId, spamReportChannelId, chatbotModel, scraperModel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [guildID, JSON.stringify(serverSettings.domains), JSON.stringify(serverSettings.blacklist), serverSettings.verifiedRoleName, serverSettings.unverifiedRoleName, serverSettings.channelID, serverSettings.messageID, serverSettings.language, serverSettings.autoVerify, serverSettings.autoAddUnverified, serverSettings.verifyMessage, serverSettings.logChannel, serverSettings.errorNotifyType, serverSettings.errorNotifyTarget, JSON.stringify(serverSettings.defaultRoles), JSON.stringify(serverSettings.domainRoles), serverSettings.eventForumId || "", serverSettings.spamReportChannelId || "", serverSettings.chatbotModel || "gemini-2.5-flash", serverSettings.scraperModel || "gemini-2.5-flash"])
     }
 
     async getServerSettings(guildID, callback) {
@@ -178,6 +184,10 @@ class Database {
                     serverSettings.logChannel = result.logChannel
                     serverSettings.errorNotifyType = result.errorNotifyType || "owner"
                     serverSettings.errorNotifyTarget = result.errorNotifyTarget || ""
+                    serverSettings.eventForumId = result.eventForumId || ""
+                    serverSettings.spamReportChannelId = result.spamReportChannelId || ""
+                    serverSettings.chatbotModel = result.chatbotModel || "gemini-2.5-flash"
+                    serverSettings.scraperModel = result.scraperModel || "gemini-2.5-flash"
                     
                     // Parse domains (JSON array, with fallback for legacy comma-separated format)
                     try {

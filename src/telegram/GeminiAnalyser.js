@@ -9,7 +9,54 @@ const eventExtractorPrompt = require('../prompts/eventExtractorPrompt');
 // data from it. Returns { isEvent: false } for non-events and { _error: true }
 // on API failure.
 
-async function analyseWithGemini(text) {
+function sanitizeJsonString(raw) {
+    if (!raw) return '{"isEvent":false}';
+    let str = raw.trim();
+    if (str.startsWith('```')) {
+        str = str.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    }
+    
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+    
+    for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        if (escapeNext) {
+            result += char;
+            escapeNext = false;
+            continue;
+        }
+        if (char === '\\') {
+            result += char;
+            escapeNext = true;
+            continue;
+        }
+        if (char === '"') {
+            inString = !inString;
+            result += char;
+            continue;
+        }
+        if (inString) {
+            if (char === '\n') {
+                result += '\\n';
+            } else if (char === '\r') {
+                // ignore carriage return inside string
+            } else if (char === '\t') {
+                result += '\\t';
+            } else if (char.charCodeAt(0) < 32) {
+                // ignore other control characters
+            } else {
+                result += char;
+            }
+        } else {
+            result += char;
+        }
+    }
+    return result;
+}
+
+async function analyseWithGemini(text, modelName = 'gemini-2.5-flash') {
     const now = new Date();
     const today = now.toLocaleDateString('en-MY', {
         weekday: 'long',
@@ -30,7 +77,7 @@ async function analyseWithGemini(text) {
         promptText =
             `[LANGUAGE HINT: This message is in Malay. You MUST:\n` +
             `1. Translate the ENTIRE message content into English.\n` +
-            `2. Preserve every paragraph break and line break from the original. Each paragraph must be separated by a blank line in the translation.\n` +
+            `2. Preserve every paragraph break from the original using escaped newlines (\\n\\n) in the JSON string. NEVER output literal unescaped line breaks inside JSON strings.\n` +
             `3. The 'title' and 'exactText' MUST be in English.]\n\n` +
             `MESSAGE:\n"""\n` +
             text +
@@ -75,10 +122,10 @@ async function analyseWithGemini(text) {
 
     try {
         const response = await aiGateway.generateContent({
-            model: 'gemini-2.5-flash',
+            model: modelName || 'gemini-2.5-flash',
             systemInstruction,
             temperature: 0.1,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,
             responseMimeType: 'application/json',
             responseSchema: schema,
             safetySettings: [
@@ -166,7 +213,14 @@ async function analyseWithGemini(text) {
         });
 
         const raw = response.text || '{"isEvent":false}';
-        const parsed = JSON.parse(raw);
+        let parsed;
+        try {
+            const cleaned = sanitizeJsonString(raw);
+            parsed = JSON.parse(cleaned);
+        } catch (parseErr) {
+            logError(`[GeminiAnalyser] JSON parse error: ${parseErr.message} | Raw text: ${raw}`);
+            return { isEvent: false, _error: true };
+        }
         parsed._isMalay = isMalay;
 
         // Note: We only collapse 3+ consecutive newlines to 2.

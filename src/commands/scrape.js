@@ -14,9 +14,9 @@ module.exports = {
                 type: ApplicationCommandOptionType.String,
                 required: false,
                 choices: [
-                    { name: '▶️  Run now — scrape once immediately',        value: 'run'   },
-                    { name: '🔁  Start auto — enable scheduled scraping',   value: 'start' },
-                    { name: '⏹️  Stop auto — disable scheduled scraping',   value: 'stop'  },
+                    { name: 'Run Now (Scrape immediately)', value: 'run' },
+                    { name: 'Start Auto (Enable scheduled scraping)', value: 'start' },
+                    { name: 'Stop (Abort active scrape & stop auto)', value: 'stop' },
                 ],
             },
             {
@@ -74,34 +74,32 @@ module.exports = {
             await interaction.deferReply({ ephemeral: true });
             try {
                 const deleted = await clearSeenMessages();
-                return interaction.editReply(
-                    `🗑️ **Seen messages database cleared!** Removed ${deleted} entr${deleted === 1 ? 'y' : 'ies'}.\n` +
-                    `Run \`/scrape\` to start a fresh scrape cycle.`
-                );
+                return interaction.editReply(`🗑️ **Database Cleared**: Removed ${deleted} seen message records.`);
             } catch (err) {
                 console.error('[ScrapeCommand] cleardb error:', err);
-                return interaction.editReply('❌ Failed to clear the seen messages database.');
+                return interaction.editReply('❌ Failed to clear seen messages database.');
             }
         }
 
         // ── stop ──────────────────────────────────────────────────────────────
         if (action === 'stop') {
             const stoppedCron = stopScrapeCron();
-            let messages = [];
+            let stoppedActive = false;
 
             if (state.isScraping) {
                 state.cancelScrape = true;
-                messages.push('⏹️ **Active scrape cycle aborted.**');
+                stoppedActive = true;
             }
-            if (stoppedCron) {
-                messages.push('⏹️ **Auto-scraping stopped.** The scheduled cron has been cancelled.');
-            }
-            if (messages.length === 0) {
-                messages.push('⚠️ No active scrape cycle or auto-scraping schedule is currently running.');
+
+            if (!stoppedActive && !stoppedCron) {
+                return interaction.reply({
+                    content: '⚠️ **No Action Taken**: No active scrape cycle or auto-scraping schedule is running.',
+                    ephemeral: true,
+                });
             }
 
             return interaction.reply({
-                content: messages.join('\n'),
+                content: '⏹️ **Scraping Stopped**: Active cycle aborted and background schedule disabled.',
                 ephemeral: true,
             });
         }
@@ -110,15 +108,15 @@ module.exports = {
         if (action === 'start') {
             if (!state.telegramClient) {
                 return interaction.reply({
-                    content: '❌ Telegram client is not connected yet. Please wait a moment and try again.',
+                    content: '❌ **Not Connected**: Telegram client is offline. Please try again shortly.',
                     ephemeral: true,
                 });
             }
             const started = startScrapeCron(interaction.client);
             return interaction.reply({
                 content: started
-                    ? `🔁 **Auto-scraping enabled!** The bot will now scrape on the configured interval.\nUse \`/scrape action:Stop auto\` to cancel.`
-                    : '⚠️ Auto-scraping is already running.',
+                    ? '🔁 **Auto-Scraping Enabled**: Scheduled background scraping is active.'
+                    : '⚠️ **Already Running**: Auto-scraping is already active.',
                 ephemeral: true,
             });
         }
@@ -126,48 +124,39 @@ module.exports = {
         // ── run (one-shot scrape) ─────────────────────────────────────────────
         if (!state.telegramClient) {
             return interaction.reply({
-                content: '❌ Telegram client is not connected yet. Please wait a moment and try again.',
+                content: '❌ **Not Connected**: Telegram client is offline. Please try again shortly.',
                 ephemeral: true,
             });
         }
 
         if (state.isScraping) {
             return interaction.reply({
-                content: '⚠️ A scrape cycle is already running in the background.',
+                content: '⚠️ **Already Running**: A scrape cycle is currently active in the background.',
                 ephemeral: true,
             });
         }
 
-        // Defer since scraping can take a while
         await interaction.deferReply({ ephemeral: true });
 
         try {
             const result = await runScrape(interaction.client, { targetChannelId, force });
 
             if (result.skipped) {
-                return interaction.editReply('⚠️ Scrape skipped — already running.');
+                return interaction.editReply('⚠️ **Scrape Skipped**: A cycle is already running.');
             }
             if (result.cancelled) {
-                return interaction.editReply('⏹️ Scrape cycle was aborted by user.');
+                return interaction.editReply('⏹️ **Scrape Aborted**: Cycle was stopped by user.');
             }
             if (result.error) {
-                return interaction.editReply(`❌ Scrape failed: ${result.error}`);
+                return interaction.editReply(`❌ **Scrape Failed**: ${result.error}`);
             }
 
-            const cronStatus = isScrapeCronActive()
-                ? `\n_Auto-scraping is **enabled** — the bot will continue scraping on its schedule._`
-                : `\n_Auto-scraping is **disabled**. Use \`/scrape action:Start auto\` to enable it._`;
-
             return interaction.editReply(
-                `✅ **Scrape complete!**\n` +
-                `- Channels Scraped: ${result.channelsScraped}\n` +
-                `- Messages Sent to Gemini: ${result.totalGemini}\n` +
-                `- Events Found & Posted: ${result.totalEvents}` +
-                cronStatus
+                `✅ **Scrape Complete** • ${result.channelsScraped} channels • ${result.totalGemini} analyzed • **${result.totalEvents} events posted**`
             );
         } catch (error) {
             console.error('[ScrapeCommand] Error:', error);
-            return interaction.editReply('❌ An unexpected error occurred during the scrape.');
+            return interaction.editReply('❌ **Error**: An unexpected error occurred during the scrape.');
         }
     },
 };

@@ -71,6 +71,9 @@ db.serialize(() => {
     db.run(`ALTER TABLE telegram_events ADD COLUMN title_hash TEXT`,             () => {});
     db.run(`ALTER TABLE telegram_events ADD COLUMN posted_at INTEGER`,           () => {});
     db.run(`ALTER TABLE telegram_events ADD COLUMN embedding BLOB`,              () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN spam_report_msg_id TEXT DEFAULT NULL`, () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN spam_report_count INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN spam_status TEXT DEFAULT 'none'`, () => {});
     db.run(`CREATE INDEX IF NOT EXISTS idx_title_hash ON telegram_events (title_hash)`);
 
     // ── Telegram blacklist ──────────────────────────────────────────────────

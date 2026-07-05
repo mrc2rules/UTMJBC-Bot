@@ -14,7 +14,7 @@ These are NOT events and must return { "isEvent": false }:
 
 RULE 2: Extract the event end date as "eventEndDate" in ISO format (YYYY-MM-DD). Do NOT evaluate whether the event is past — just extract the date accurately. If you can't determine the date, return null.
 
-RULE 3: You MUST extract the exact, original message text into 'exactText'. DO NOT summarize or truncate it. If the original message is in Malay or another language, translate the ENTIRE message into English and put the full translation into 'exactText'. CRITICAL: You MUST preserve every paragraph break and line break from the original message. Each new paragraph in the original must appear as a separate paragraph (blank line between them) in your translation. Do NOT collapse the message into a single wall of text. The 'title' field must ALWAYS be in English — never leave it empty or generic.
+RULE 3: You MUST extract the exact, original message text into 'exactText'. DO NOT summarize or truncate it. If the original message is in Malay or another language, translate the ENTIRE message into English and put the full translation into 'exactText'. CRITICAL FOR JSON: You MUST preserve every paragraph break and line break from the original message using escaped newlines (\\n\\n) in the JSON string. NEVER output literal unescaped line breaks inside JSON strings. The 'title' field must ALWAYS be in English — never leave it empty or generic.
 
 RULE 4: Classify as exactly one of: "Club Activity", "Club Recruitment", "Club Announcement", "Competition / Hackathon", "Talk / Seminar / Workshop", "Faculty / Department Event", "University-wide Event", "External / Collaboration Event".
 

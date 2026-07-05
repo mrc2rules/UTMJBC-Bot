@@ -19,6 +19,11 @@ class ServerSettings {
         this.defaultRoles = []
         // Domain-specific roles: { "@domain.com": ["roleId1", "roleId2"], "@*.edu": ["roleId3"] }
         this.domainRoles = {}
+        // Event system & AI model configurations
+        this.eventForumId = ""
+        this.spamReportChannelId = ""
+        this.chatbotModel = "gemini-2.5-flash"
+        this.scraperModel = "gemini-2.5-flash"
     }
 
     get status() {

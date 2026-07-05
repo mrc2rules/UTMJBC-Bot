@@ -18,7 +18,7 @@ module.exports = {
 
         await interaction.deferReply({ ephemeral: false });
 
-        const result = await getGeminiResponse(question);
+        const result = await getGeminiResponse(question, interaction.guildId);
 
         if (!result) {
             return interaction.followUp({

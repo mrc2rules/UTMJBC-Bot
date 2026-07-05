@@ -56,19 +56,18 @@ module.exports = {
                         '`/blacklist clear` - Remove all blacklist entries'
                 },
                 {
-                    name: '⚙️ Settings',
+                    name: '⚙️ Settings & Configuration',
                     value:
-                        '`/settings language` - Change bot language\n' +
-                        '`/settings log-channel` - Set verification log channel\n' +
-                        '`/settings verify-message` - Custom message in emails\n' +
-                        '`/settings auto-verify` - Auto-prompt new members\n' +
-                        '`/settings auto-unverified` - Auto-assign unverified role'
+                        '`/settings` - Configure language, logs, verify message, `promptnewtoverify`, & `auto_unverified`\n' +
+                        '`/config` - Configure Events System channels & AI models (`chatbot_model`, `scraper_model`)\n' +
+                        '`/errornotify` - Configure where error alerts are sent (`owner`, `channel`, `user`)'
                 },
                 {
-                    name: '🛡️ Moderation',
+                    name: '🛡️ Moderation & Events',
                     value:
                         '`/manualverify` - Manually verify a user without email\n' +
-                        '`/set_error_notify` - Configure error notifications'
+                        '`/scrape` - Manage Telegram event scraper (`start`, `stop`, `status`, `history`)\n' +
+                        '`/tgblacklist` - Manage Telegram keyword blacklist'
                 },
                 {
                     name: '📊 Information',
@@ -77,9 +76,10 @@ module.exports = {
                         '`/help` - Show this help message'
                 },
                 {
-                    name: '👤 User Commands',
+                    name: '👤 User & AI Commands',
                     value:
                         '`/verify` - Start email verification process\n' +
+                        '`/askai` - Ask Gemini AI questions about UTM\n' +
                         '`/data delete-user` - Delete your verification data'
                 },
                 {

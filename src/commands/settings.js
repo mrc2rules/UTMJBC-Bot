@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const { MessageFlags } = require('discord.js');
+const { MessageFlags, EmbedBuilder } = require('discord.js');
 const database = require("../database/Database.js");
 const { languages } = require("../Language");
 
@@ -7,169 +7,119 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('settings')
         .setDescription('Configure bot settings for your server')
-        .addSubcommand(subcommand =>
-            subcommand
+        .addStringOption(option =>
+            option
                 .setName('language')
                 .setDescription('Change the language for bot messages and verification prompts')
-                .addStringOption(option =>
-                    option
-                        .setName('language')
-                        .setDescription('Select a language')
-                        .setRequired(true)
-                        .addChoices(...[...languages.keys()].map(value => ({
-                            name: value.charAt(0).toUpperCase() + value.slice(1),
-                            value: value
-                        })))
-                )
+                .setRequired(false)
+                .addChoices(...[...languages.keys()].map(value => ({
+                    name: value.charAt(0).toUpperCase() + value.slice(1),
+                    value: value
+                })))
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('log-channel')
+        .addChannelOption(option =>
+            option
+                .setName('log_channel')
                 .setDescription('Set a channel to log verification events')
-                .addChannelOption(option =>
-                    option
-                        .setName('channel')
-                        .setDescription('Channel for verification logs (leave empty to disable)')
-                        .setRequired(false)
-                )
+                .setRequired(false)
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('verify-message')
-                .setDescription('Customize the message shown in verification emails')
-                .addStringOption(option =>
-                    option
-                        .setName('message')
-                        .setDescription('Custom message for verification emails (leave empty to use default)')
-                        .setRequired(false)
-                )
+        .addStringOption(option =>
+            option
+                .setName('verify_message')
+                .setDescription('Custom message for verification emails (pass "clear" to reset to default)')
+                .setRequired(false)
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('auto-verify')
+        .addBooleanOption(option =>
+            option
+                .setName('promptnewtoverify')
                 .setDescription('Automatically prompt new members to verify when they join')
-                .addBooleanOption(option =>
-                    option
-                        .setName('enable')
-                        .setDescription('Enable or disable auto-verify prompts for new members')
-                        .setRequired(true)
-                )
+                .setRequired(false)
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('auto-unverified')
+        .addBooleanOption(option =>
+            option
+                .setName('auto_unverified')
                 .setDescription('Automatically assign the unverified role to new members')
-                .addBooleanOption(option =>
-                    option
-                        .setName('enable')
-                        .setDescription('Enable or disable auto-assignment of unverified role')
-                        .setRequired(true)
-                )
+                .setRequired(false)
         )
         .setDefaultMemberPermissions(0),
 
     async execute(interaction) {
-        const subcommand = interaction.options.getSubcommand();
+        const language = interaction.options.getString('language');
+        const logChannel = interaction.options.getChannel('log_channel');
+        const verifyMessage = interaction.options.getString('verify_message');
+        const promptNewToVerify = interaction.options.getBoolean('promptnewtoverify');
+        const autoUnverified = interaction.options.getBoolean('auto_unverified');
 
-        await database.getServerSettings(interaction.guildId, async serverSettings => {
-            if (subcommand === 'language') {
-                const language = interaction.options.getString('language', true);
+        await database.getServerSettings(interaction.guildId, async (serverSettings) => {
+            // If no options provided, show current status
+            if (language === null && !logChannel && verifyMessage === null && promptNewToVerify === null && autoUnverified === null) {
+                const langDisplay = (serverSettings.language || 'english').charAt(0).toUpperCase() + (serverSettings.language || 'english').slice(1);
+                const logDisplay = serverSettings.logChannel ? `<#${serverSettings.logChannel}>` : '*Disabled*';
+                const msgDisplay = serverSettings.verifyMessage ? `"${serverSettings.verifyMessage}"` : '*Default*';
+                const promptDisplay = serverSettings.autoVerify ? '✅ Enabled' : '❌ Disabled';
+                const roleDisplay = serverSettings.autoAddUnverified ? '✅ Enabled' : '❌ Disabled';
+
+                const embed = new EmbedBuilder()
+                    .setTitle('⚙️ Server Settings Overview')
+                    .setColor(0x5D001A)
+                    .addFields(
+                        { name: '🌐 Language', value: langDisplay, inline: true },
+                        { name: '📝 Log Channel', value: logDisplay, inline: true },
+                        { name: '🔔 Prompt New Members to Verify (`promptnewtoverify`)', value: promptDisplay, inline: false },
+                        { name: '👤 Auto-assign Unverified Role (`auto_unverified`)', value: roleDisplay, inline: false },
+                        { name: '✉️ Custom Verify Message', value: msgDisplay, inline: false }
+                    )
+                    .setDescription('To update any setting, run `/settings` with one or more optional parameters.')
+                    .setTimestamp();
+
+                return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+            }
+
+            let updatedFields = [];
+
+            if (language !== null) {
                 serverSettings.language = language;
-                database.updateServerSettings(interaction.guildId, serverSettings);
-                
-                await interaction.reply({
-                    content: `🌐 **Language changed to:** ${language.charAt(0).toUpperCase() + language.slice(1)}\n\nAll bot messages will now be displayed in this language.`,
-                    flags: MessageFlags.Ephemeral
-                });
-                return;
+                updatedFields.push(`**Language**: ${language.charAt(0).toUpperCase() + language.slice(1)}`);
             }
 
-            if (subcommand === 'log-channel') {
-                const logChannel = interaction.options.getChannel('channel');
-                
-                if (!logChannel) {
-                    serverSettings.logChannel = "";
-                    database.updateServerSettings(interaction.guildId, serverSettings);
-                    await interaction.reply({
-                        content: "📝 **Verification logging disabled.**\n\nVerification events will no longer be logged to a channel.",
-                        flags: MessageFlags.Ephemeral
-                    });
-                } else {
-                    serverSettings.logChannel = logChannel.id;
-                    database.updateServerSettings(interaction.guildId, serverSettings);
-                    await interaction.reply({
-                        content: `📝 **Log channel set to:** <#${logChannel.id}>\n\nVerification events will be logged to this channel, including:\n• User email verifications\n• Manual verifications by admins`,
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
-                return;
+            if (logChannel !== null) {
+                serverSettings.logChannel = logChannel.id;
+                updatedFields.push(`**Log Channel**: <#${logChannel.id}>`);
             }
 
-            if (subcommand === 'verify-message') {
-                const verifyMessage = interaction.options.getString('message');
-                
-                if (!verifyMessage) {
-                    serverSettings.verifyMessage = "";
-                    database.updateServerSettings(interaction.guildId, serverSettings);
-                    await interaction.reply({
-                        content: "✉️ **Custom verify message removed.**\n\nVerification emails will now use the default message.",
-                        flags: MessageFlags.Ephemeral
-                    });
+            if (verifyMessage !== null) {
+                if (verifyMessage.toLowerCase() === 'clear' || verifyMessage.trim() === '') {
+                    serverSettings.verifyMessage = '';
+                    updatedFields.push(`**Verify Message**: Reset to default`);
                 } else {
                     serverSettings.verifyMessage = verifyMessage;
-                    database.updateServerSettings(interaction.guildId, serverSettings);
-                    await interaction.reply({
-                        content: `✉️ **Custom verify message set:**\n"${verifyMessage}"\n\nThis message will be included in verification emails sent to users.`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    updatedFields.push(`**Verify Message**: "${verifyMessage}"`);
                 }
-                return;
             }
 
-            if (subcommand === 'auto-verify') {
-                const enable = interaction.options.getBoolean('enable', true);
-                serverSettings.autoVerify = +enable;
-                database.updateServerSettings(interaction.guildId, serverSettings);
-                
-                if (enable) {
-                    await interaction.reply({
-                        content: "✅ **Auto-verify enabled!**\n\nNew members will automatically receive a verification prompt when they join the server.",
-                        flags: MessageFlags.Ephemeral
-                    });
-                } else {
-                    await interaction.reply({
-                        content: "❌ **Auto-verify disabled.**\n\nNew members will need to use `/verify` or click a verification button to start the verification process.",
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
-                return;
+            if (promptNewToVerify !== null) {
+                serverSettings.autoVerify = +promptNewToVerify;
+                updatedFields.push(`**Prompt New to Verify**: ${promptNewToVerify ? 'Enabled ✅' : 'Disabled ❌'}`);
             }
 
-            if (subcommand === 'auto-unverified') {
-                const enable = interaction.options.getBoolean('enable', true);
-                serverSettings.autoAddUnverified = +enable;
-                database.updateServerSettings(interaction.guildId, serverSettings);
-                
-                if (enable) {
+            if (autoUnverified !== null) {
+                serverSettings.autoAddUnverified = +autoUnverified;
+                let extraWarning = '';
+                if (autoUnverified) {
                     const roleUnverified = interaction.guild.roles.cache.find(r => r.id === serverSettings.unverifiedRoleName);
-                    if (roleUnverified) {
-                        await interaction.reply({
-                            content: `✅ **Auto-assign unverified role enabled!**\n\nNew members will automatically receive the **${roleUnverified.name}** role when they join.`,
-                            flags: MessageFlags.Ephemeral
-                        });
-                    } else {
-                        await interaction.reply({
-                            content: "✅ **Auto-assign unverified role enabled!**\n\n⚠️ **Warning:** No unverified role is configured. Use `/role unverified` to set one first.",
-                            flags: MessageFlags.Ephemeral
-                        });
+                    if (!roleUnverified) {
+                        extraWarning = ' *(⚠️ Warning: No unverified role configured. Use `/role unverified` to set one)*';
                     }
-                } else {
-                    await interaction.reply({
-                        content: "❌ **Auto-assign unverified role disabled.**\n\nNew members will not automatically receive the unverified role.",
-                        flags: MessageFlags.Ephemeral
-                    });
                 }
+                updatedFields.push(`**Auto-assign Unverified Role**: ${autoUnverified ? 'Enabled ✅' : 'Disabled ❌'}${extraWarning}`);
             }
+
+            database.updateServerSettings(interaction.guildId, serverSettings);
+
+            return interaction.reply({
+                content: `✅ **Server Settings Updated**:\n• ${updatedFields.join('\n• ')}`,
+                flags: MessageFlags.Ephemeral
+            });
         });
     }
 };

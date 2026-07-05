@@ -30,6 +30,7 @@ const { createSessionExpiredEmbed, createInvalidCodeEmbed, createInvalidEmailEmb
 const ErrorNotifier = require('./utils/ErrorNotifier');
 const { emailMatchesDomains, emailIsBlacklisted, getMatchingDomainPatterns } = require('./utils/wildcardMatch');
 const { start: startTelegram } = require('./telegram/TelegramListener');
+const { handleSpamButton, handleDeleteEvent, handleDismissReport } = require('./telegram/SpamHandler');
 const { logInfo, logWarn, logError } = require('./shared/logger');
 
 const bot = new Discord.Client({
@@ -290,6 +291,18 @@ bot.on('interactionCreate', async interaction => {
                 }, 0)
             })
             return
+        }
+        if (interaction.customId.startsWith('report_spam_')) {
+            await handleSpamButton(interaction);
+            return;
+        }
+        if (interaction.customId.startsWith('delete_event_')) {
+            await handleDeleteEvent(interaction);
+            return;
+        }
+        if (interaction.customId.startsWith('dismiss_report_')) {
+            await handleDismissReport(interaction);
+            return;
         }
         return
     }

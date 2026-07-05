@@ -171,6 +171,15 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
             );
         }
     }
+
+    row.addComponents(
+        new ButtonBuilder()
+            .setCustomId('report_spam')
+            .setLabel('Report as Spam')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🚨')
+    );
+
     if (row.components.length > 0) components.push(row);
 
     // ── Create Thread ──────────────────────────────────────────────────────────

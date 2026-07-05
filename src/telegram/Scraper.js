@@ -2,6 +2,7 @@ const cron   = require('node-cron');
 const config = require('../../config/config.json');
 const state  = require('../shared/state');
 const db     = require('../shared/db');
+const database = require('../database/Database');
 const aiGateway = require('../services/AIGateway');
 
 const { logInfo, logError, logWarn } = require('./logger');
@@ -104,7 +105,7 @@ function setChannelCursor(channelId, maxMessageId) {
 
 // ─── Channel Scraper ──────────────────────────────────────────────────────────
 
-async function scrapeChannel(discordChannel, channelId, force = false, channelName = null, blacklist = [], context = { lastGeminiCall: 0 }) {
+async function scrapeChannel(discordChannel, channelId, force = false, channelName = null, blacklist = [], context = { lastGeminiCall: 0 }, scraperModel = 'gemini-2.5-flash') {
     try {
         let parsedId = channelId;
         if (/^\d+$/.test(parsedId)) parsedId = '-100' + parsedId;
@@ -202,7 +203,7 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
             const langTag = detectMalay(msg.message) ? '[lang=Malay]' : '[lang=EN]';
             logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SENT TO GEMINI ${langTag}`);
 
-            const result = await analyseWithGemini(msg.message);
+            const result = await analyseWithGemini(msg.message, scraperModel);
 
             if (result._error) {
                 logWarn(`[Scraper] Gemini failed for ${channelId} msg ${msg.id}, will retry next cycle`);
@@ -347,7 +348,22 @@ async function runScrape(discordClient, options = {}) {
     state.isScraping = true;
     logInfo('[Scraper] Starting scrape cycle...');
 
-    const targetDiscordChannelId = config.discordEventForumId || '1519270170873565405';
+    let targetDiscordChannelId = config.discordEventForumId || '1519270170873565405';
+    let scraperModel = 'gemini-2.5-flash';
+    if (options.guildId) {
+        const settings = await new Promise(resolve => database.getServerSettings(options.guildId, resolve));
+        if (settings.eventForumId) targetDiscordChannelId = settings.eventForumId;
+        if (settings.scraperModel) scraperModel = settings.scraperModel;
+    } else {
+        try {
+            const guildRow = await new Promise((resolve) => {
+                database.db.get("SELECT eventForumId, scraperModel FROM guilds WHERE eventForumId != '' AND eventForumId IS NOT NULL LIMIT 1", (err, row) => resolve(row));
+            });
+            if (guildRow && guildRow.eventForumId) targetDiscordChannelId = guildRow.eventForumId;
+            if (guildRow && guildRow.scraperModel) scraperModel = guildRow.scraperModel;
+        } catch {}
+    }
+
     let discordChannel = discordClient.channels.cache.get(targetDiscordChannelId);
     if (!discordChannel) {
         discordChannel = await discordClient.channels.fetch(targetDiscordChannelId).catch(() => null);
@@ -381,7 +397,8 @@ async function runScrape(discordClient, options = {}) {
             options.force,
             ch.channel_name,
             blacklist,
-            globalContext
+            globalContext,
+            scraperModel
         );
         totalEvents += eventsFound;
         totalGemini += sentToGemini;
