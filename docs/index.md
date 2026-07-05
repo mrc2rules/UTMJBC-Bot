@@ -62,7 +62,7 @@ UTMJBC Bot is a resilient architecture designed specifically for university Disc
     Provides instant, verified answers to campus questions right inside Discord.
 
     - **Command:** `/askai <question>`
-    - **Authoritative Grounding:** Restricts search and citations strictly to official sources (`utm.my` and `utm.gitbook.io`).
+    - **Authoritative Grounding:** Restricts search strictly to official sources (`utm.my` and `utm.gitbook.io`).
     - **Public Access:** Available to any server member without administrative privileges.
 
 ---

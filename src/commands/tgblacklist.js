@@ -6,37 +6,23 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('tgblacklist')
         .setDescription('Manage the Telegram event scraper keyword blacklist. (Admin only)')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('add')
-                .setDescription('Add a keyword to the blacklist (case-insensitive)')
-                .addStringOption(option =>
-                    option
-                        .setName('keyword')
-                        .setDescription('The keyword to block')
-                        .setRequired(true)
+        .addStringOption(option =>
+            option
+                .setName('action')
+                .setDescription('Action to perform')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Add Keyword', value: 'add' },
+                    { name: 'Remove Keyword', value: 'remove' },
+                    { name: 'List Keywords', value: 'list' },
+                    { name: 'Clear All Keywords', value: 'clear' }
                 )
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('remove')
-                .setDescription('Remove a keyword from the blacklist')
-                .addStringOption(option =>
-                    option
-                        .setName('keyword')
-                        .setDescription('The keyword to remove')
-                        .setRequired(true)
-                )
-        )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('list')
-                .setDescription('List all blacklisted keywords')
-        )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('clear')
-                .setDescription('Clear all blacklisted keywords')
+        .addStringOption(option =>
+            option
+                .setName('keyword')
+                .setDescription('The keyword to block or remove')
+                .setRequired(false)
         )
         .setDefaultMemberPermissions(0),
 
@@ -48,9 +34,10 @@ module.exports = {
             });
         }
 
-        const subcommand = interaction.options.getSubcommand();
+        const action = interaction.options.getString('action');
+        const keyword = interaction.options.getString('keyword')?.trim();
 
-        if (subcommand === 'list') {
+        if (action === 'list') {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             try {
                 const list = await getKeywordBlacklist();
@@ -69,11 +56,25 @@ module.exports = {
             }
         }
 
-        if (subcommand === 'add') {
-            const keyword = interaction.options.getString('keyword').trim();
-            if (!keyword) {
-                return interaction.reply({ content: '❌ Keyword cannot be empty.', flags: MessageFlags.Ephemeral });
+        if (action === 'clear') {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            try {
+                const count = await clearKeywordBlacklist();
+                return interaction.editReply(`🗑️ Wiped the blacklist. Removed ${count} keyword(s).`);
+            } catch (err) {
+                console.error('[tgblacklist] clear error:', err);
+                return interaction.editReply('❌ Failed to clear the blacklist.');
             }
+        }
+
+        if (!keyword) {
+            return interaction.reply({
+                content: `❌ You must specify a \`keyword\` when using the **${action}** action. Example: \`/tgblacklist action:${action} keyword:crypto\``,
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        if (action === 'add') {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             try {
                 const added = await addKeywordToBlacklist(keyword, interaction.user.tag);
@@ -88,8 +89,7 @@ module.exports = {
             }
         }
 
-        if (subcommand === 'remove') {
-            const keyword = interaction.options.getString('keyword').trim();
+        if (action === 'remove') {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             try {
                 const removed = await removeKeywordFromBlacklist(keyword);
@@ -101,17 +101,6 @@ module.exports = {
             } catch (err) {
                 console.error('[tgblacklist] remove error:', err);
                 return interaction.editReply('❌ Failed to remove keyword.');
-            }
-        }
-
-        if (subcommand === 'clear') {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-            try {
-                const count = await clearKeywordBlacklist();
-                return interaction.editReply(`🗑️ Wiped the blacklist. Removed ${count} keyword(s).`);
-            } catch (err) {
-                console.error('[tgblacklist] clear error:', err);
-                return interaction.editReply('❌ Failed to clear the blacklist.');
             }
         }
     }

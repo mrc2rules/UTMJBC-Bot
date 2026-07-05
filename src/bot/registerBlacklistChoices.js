@@ -20,18 +20,16 @@ module.exports = async function registerBlacklistChoices(guildId, blacklistComma
 
             let blacklistCommandData = blacklistCommand.data.toJSON()
 
-            // Find the 'remove' subcommand and update its choices
-            const removeSubcommand = blacklistCommandData.options.find(opt => opt.name === "remove")
-            if (removeSubcommand && removeSubcommand.options) {
-                const emailsOption = removeSubcommand.options.find(opt => opt.name === "emails")
-                if (emailsOption) {
-                    if (serverSettings.blacklist.length > 0 && serverSettings.blacklist.length <= 25) {
-                        emailsOption.choices = serverSettings.blacklist.map(entry => {
-                            return {"name": truncateString(entry), "value": truncateString(entry)}
-                        })
-                    } else {
-                        emailsOption.choices = undefined
-                    }
+            // Find the 'emails' option (top-level in refactored command or in legacy 'remove' subcommand)
+            const emailsOption = blacklistCommandData.options.find(opt => opt.name === "emails") ||
+                                 blacklistCommandData.options.find(opt => opt.name === "remove")?.options?.find(opt => opt.name === "emails");
+            if (emailsOption) {
+                if (serverSettings.blacklist.length > 0 && serverSettings.blacklist.length <= 25) {
+                    emailsOption.choices = serverSettings.blacklist.map(entry => {
+                        return {"name": truncateString(entry), "value": truncateString(entry)}
+                    })
+                } else {
+                    emailsOption.choices = undefined
                 }
             }
 

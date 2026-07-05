@@ -18,7 +18,7 @@ const MALAY_KEYWORDS = [
  * a Malay-language message (threshold: 4 unique Malay keyword hits).
  */
 function detectMalay(text) {
-    const words     = text.toLowerCase().split(/\s+/);
+    const words     = text.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/);
     const uniqueHits = new Set(words.filter(w => MALAY_KEYWORDS.includes(w))).size;
     return uniqueHits >= 4;
 }

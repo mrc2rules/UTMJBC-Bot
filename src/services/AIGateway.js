@@ -1,4 +1,5 @@
 const { GoogleGenAI } = require('@google/genai');
+const { logError, logWarn } = require('../shared/logger');
 
 class AIGateway {
     constructor() {
@@ -36,12 +37,23 @@ class AIGateway {
         if (now < this.circuitOpenUntil) {
             const remainingSecs = Math.ceil((this.circuitOpenUntil - now) / 1000);
             throw new Error(`[AIGateway] Circuit breaker is OPEN due to repeated API failures. Retrying in ${remainingSecs}s.`);
+        } else if (this.circuitOpenUntil !== 0) {
+            // Circuit cooldown expired, reset circuit state
+            this.circuitOpenUntil = 0;
+            this.failureCount = 0;
         }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort(new Error(`[AIGateway] Request timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
 
         try {
             const ai = this.getClient();
 
-            const config = {};
+            const config = {
+                signal: controller.signal
+            };
             if (systemInstruction) config.systemInstruction = systemInstruction;
             if (temperature !== undefined) config.temperature = temperature;
             if (maxOutputTokens !== undefined) config.maxOutputTokens = maxOutputTokens;
@@ -50,9 +62,11 @@ class AIGateway {
             if (tools) config.tools = tools;
             if (safetySettings) config.safetySettings = safetySettings;
 
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error(`[AIGateway] Request timed out after ${timeoutMs}ms`)), timeoutMs)
-            );
+            const timeoutPromise = new Promise((_, reject) => {
+                controller.signal.addEventListener('abort', () => {
+                    reject(controller.signal.reason || new Error(`[AIGateway] Request aborted`));
+                });
+            });
 
             const requestPromise = ai.models.generateContent({
                 model,
@@ -67,16 +81,31 @@ class AIGateway {
             return response;
         } catch (err) {
             this.failureCount++;
-            console.error(`[AIGateway] Error during generateContent (${this.failureCount}/${this.CIRCUIT_THRESHOLD}):`, err.message);
+            logError(`[AIGateway] Error during generateContent (${this.failureCount}/${this.CIRCUIT_THRESHOLD}): ${err.message}`);
 
             if (this.failureCount >= this.CIRCUIT_THRESHOLD) {
                 this.circuitOpenUntil = Date.now() + this.CIRCUIT_COOLDOWN_MS;
-                console.error(`[AIGateway] Circuit breaker TRIPPED! Pausing API calls for 5 minutes.`);
+                logError(`[AIGateway] Circuit breaker TRIPPED! Pausing API calls for 5 minutes.`);
             }
             throw err;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    async embedContent({ model = 'text-embedding-004', contents }) {
+        try {
+            const ai = this.getClient();
+            const response = await ai.models.embedContent({
+                model,
+                contents
+            });
+            return response.embedding ? response.embedding.values : null;
+        } catch (err) {
+            logError(`[AIGateway] embedContent error: ${err.message}`);
+            return null;
         }
     }
 }
 
-// Export singleton instance
 module.exports = new AIGateway();

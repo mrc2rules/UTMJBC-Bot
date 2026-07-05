@@ -15,33 +15,19 @@ const EVENT_TYPE_EMOJI = {
     'External / Collaboration Event': '🤝',
 };
 
-const EMBED_COLORS = [
-    0x3498db, 0x2ecc71, 0x9b59b6, 0xe67e22,
-    0x1abc9c, 0xe91e63, 0xf1c40f, 0x00bcd4,
-    0xff5722, 0x8bc34a,
-];
-
-const TOPIC_TAGS = {
-    'Tech/Coding':          '1519277264661909554',
-    'Sports':               '1519277357431525437',
-    'Arts/Culture':         '1519277384107429908',
-    'Business/Career':      '1519277415388549241',
-    'Self-Dev':             '1519277443771269131',
-    'Community/Volunteer':  '1519277473190383616',
-    'Academic/Science':     '1519277534045278248'
+const TYPE_COLORS = {
+    'Club Activity':                  0x3498db, // Blue
+    'Club Recruitment':               0x2ecc71, // Green
+    'Club Announcement':              0x9b59b6, // Purple
+    'Competition / Hackathon':        0xf1c40f, // Gold/Yellow
+    'Talk / Seminar / Workshop':      0xe67e22, // Orange
+    'Faculty / Department Event':     0x1abc9c, // Teal
+    'University-wide Event':          0xe91e63, // Pink
+    'External / Collaboration Event': 0x00bcd4, // Cyan
 };
 
-const META_TAGS = {
-    'Merit':    '1519276701262282792',
-    'Paid':     '1519276747961536632',
-    'Free':     '1519276780719050832',
-    'External': '1519278024506216609'
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function randomEmbedColor() {
-    return EMBED_COLORS[Math.floor(Math.random() * EMBED_COLORS.length)];
+function getEmbedColor(eventType) {
+    return TYPE_COLORS[eventType] || 0x3498db;
 }
 
 /**
@@ -115,8 +101,9 @@ function generateGoogleCalendarUrl(eventData) {
  * @param {string}  channelUsername - Human-readable source channel name
  * @param {string}  originalText    - Raw Telegram message text (fallback for description)
  * @param {string}  titleHash       - Normalised title hash (stored for cross-channel dedup)
+ * @param {Array<number>} [embedding] - Optional semantic embedding vector for FEAT-7c
  */
-async function postToDiscord(discordChannel, eventData, channelUsername, originalText, titleHash) {
+async function postToDiscord(discordChannel, eventData, channelUsername, originalText, titleHash, embedding = null) {
     // ── Description ────────────────────────────────────────────────────────────
     let descriptionText = eventData.exactText || originalText || '';
 
@@ -137,7 +124,7 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
     const embed = new EmbedBuilder()
         .setTitle(safeTitle)
         .setDescription(truncatedDescription)
-        .setColor(randomEmbedColor())
+        .setColor(getEmbedColor(eventData.type))
         .addFields(
             { name: '🗂️ Type',      value: eventData.type     || 'Not specified', inline: true },
             { name: '📆 Date/Time', value: eventData.date     || 'Not specified', inline: true },
@@ -193,19 +180,26 @@ async function postToDiscord(discordChannel, eventData, channelUsername, origina
 
     try {
         const thread = await discordChannel.threads.create(payload);
+        const embeddingStr = embedding ? JSON.stringify(embedding) : null;
 
         db.run(
             `INSERT INTO telegram_events
-                 (thread_id, title, registration_url, event_end_date, title_hash, posted_at, closed)
-             VALUES (?, ?, ?, ?, ?, ?, 0)`,
+                 (thread_id, title, registration_url, event_end_date, title_hash, posted_at, closed, embedding)
+             VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
             [
                 thread.id,
                 rawTitle,
                 eventData.registrationUrl || null,
                 eventData.eventEndDate    || null,
                 titleHash                 || null,
-                Date.now()
-            ]
+                Date.now(),
+                embeddingStr
+            ],
+            (err) => {
+                if (err) {
+                    logError(`[DiscordPublisher] DB insert failed for thread ${thread.id}: ${err.message}`);
+                }
+            }
         );
     } catch (err) {
         logError(`[DiscordPublisher] Discord API Error creating forum thread: ${err.message}`);

@@ -5,17 +5,22 @@ const eventExtractorPrompt = require('../prompts/eventExtractorPrompt');
 
 // ─── Gemini Event Analyser ────────────────────────────────────────────────────
 //
-// Sends a Telegram message to Gemini 2.5 Flash via AIGateway and extracts structured event
+// Sends a Telegram message to Gemini via AIGateway and extracts structured event
 // data from it. Returns { isEvent: false } for non-events and { _error: true }
 // on API failure.
 
 async function analyseWithGemini(text) {
-    const today = new Date().toLocaleDateString('en-MY', {
+    const now = new Date();
+    const today = now.toLocaleDateString('en-MY', {
         weekday: 'long',
         year:    'numeric',
         month:   'long',
         day:     'numeric'
     });
+
+    // Compute dynamic future dates for few-shot examples (FLAW-4 fix)
+    const exDate1 = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);      // Tomorrow
+    const exDate2 = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);  // 7 days from now
 
     const isMalay = detectMalay(text);
     const systemInstruction = eventExtractorPrompt(today);
@@ -35,6 +40,7 @@ async function analyseWithGemini(text) {
     const schema = {
         type: 'object',
         properties: {
+            reasoning:       { type: 'string',  description: 'Brief explanation of why this message is or is not an event.' },
             isEvent:         { type: 'boolean', description: 'Whether the message announces an actionable event.' },
             type:            { 
                 type: 'string', 
@@ -64,7 +70,7 @@ async function analyseWithGemini(text) {
             registrationUrl: { type: 'string',  nullable: true },
             sourceLanguage:  { type: 'string' }
         },
-        required: ['isEvent', 'title', 'exactText', 'type', 'topic', 'merit', 'cost', 'sourceLanguage']
+        required: ['reasoning', 'isEvent', 'title', 'exactText', 'type', 'topic', 'merit', 'cost', 'sourceLanguage']
     };
 
     try {
@@ -91,13 +97,14 @@ async function analyseWithGemini(text) {
                 {
                     role: 'model',
                     parts: [{ text: JSON.stringify({
+                        reasoning:       'Announces a concrete workshop with date, time, location, and registration link.',
                         isEvent:         true,
                         type:            'Talk / Seminar / Workshop',
                         topic:           'Tech/Coding',
                         title:           'UTM Web Dev Workshop',
                         date:            'Tomorrow, 2:30 PM - 5:00 PM',
-                        startDate:       '2026-06-25',
-                        eventEndDate:    '2026-06-25',
+                        startDate:       exDate1,
+                        eventEndDate:    exDate1,
                         startTime:       '14:30',
                         endTime:         '17:00',
                         location:        'N24',
@@ -116,6 +123,7 @@ async function analyseWithGemini(text) {
                 {
                     role: 'model',
                     parts: [{ text: JSON.stringify({
+                        reasoning:      'Internal reminder for club EXCO members only, not a public event or announcement for university students.',
                         isEvent:        false,
                         title:          '',
                         exactText:      '',
@@ -129,22 +137,23 @@ async function analyseWithGemini(text) {
                 // Few-shot example 3: Malay event with preserved paragraphs
                 {
                     role: 'user',
-                    parts: [{ text: '[LANGUAGE HINT: This message is in Malay. You MUST:\n1. Translate the ENTIRE message content into English.\n2. Preserve every paragraph break and line break from the original. Each paragraph must be separated by a blank line in the translation.\n3. The \'title\' and \'exactText\' MUST be in English.]\n\nMESSAGE:\n"""\n🎓 BENGKEL PEMBANGUNAN WEB UTM 2026\n\nTarikh: 28 Jun 2026 (Sabtu)\nMasa: 9:00 pagi - 1:00 tengahari\nLokasi: Makmal Komputer N28\n\nPercuma untuk semua pelajar UTM!\nMerit diberikan kepada semua peserta.\n\nDaftar sekarang: bit.ly/webdev2026\n"""' }]
+                    parts: [{ text: '[LANGUAGE HINT: This message is in Malay. You MUST:\n1. Translate the ENTIRE message content into English.\n2. Preserve every paragraph break and line break from the original. Each paragraph must be separated by a blank line in the translation.\n3. The \'title\' and \'exactText\' MUST be in English.]\n\nMESSAGE:\n"""\n🎓 BENGKEL PEMBANGUNAN WEB UTM\n\nTarikh: Sabtu depan\nMasa: 9:00 pagi - 1:00 tengahari\nLokasi: Makmal Komputer N28\n\nPercuma untuk semua pelajar UTM!\nMerit diberikan kepada semua peserta.\n\nDaftar sekarang: bit.ly/webdev2026\n"""' }]
                 },
                 {
                     role: 'model',
                     parts: [{ text: JSON.stringify({
+                        reasoning:       'Announces a web development workshop translated from Malay with clear registration details and merit.',
                         isEvent:         true,
                         type:            'Talk / Seminar / Workshop',
                         topic:           'Tech/Coding',
-                        title:           'UTM Web Development Workshop 2026',
-                        date:            '28 June 2026, 9:00 AM - 1:00 PM',
-                        startDate:       '2026-06-28',
-                        eventEndDate:    '2026-06-28',
+                        title:           'UTM Web Development Workshop',
+                        date:            'Next Saturday, 9:00 AM - 1:00 PM',
+                        startDate:       exDate2,
+                        eventEndDate:    exDate2,
                         startTime:       '09:00',
                         endTime:         '13:00',
                         location:        'Computer Lab N28',
-                        exactText:       '🎓 UTM WEB DEVELOPMENT WORKSHOP 2026\n\nDate: 28 June 2026 (Saturday)\nTime: 9:00 AM - 1:00 PM\nLocation: Computer Lab N28\n\nFree for all UTM students!\nMerit points awarded to all participants.\n\nRegister now: bit.ly/webdev2026',
+                        exactText:       '🎓 UTM WEB DEVELOPMENT WORKSHOP\n\nDate: Next Saturday\nTime: 9:00 AM - 1:00 PM\nLocation: Computer Lab N28\n\nFree for all UTM students!\nMerit points awarded to all participants.\n\nRegister now: bit.ly/webdev2026',
                         merit:           true,
                         cost:            'Free',
                         registrationUrl: 'bit.ly/webdev2026',
@@ -157,17 +166,13 @@ async function analyseWithGemini(text) {
         });
 
         const raw = response.text || '{"isEvent":false}';
-        const cleanRaw = raw.replace(/```(?:json)?|```/g, '').trim();
-
-        const parsed    = JSON.parse(cleanRaw);
+        const parsed = JSON.parse(raw);
         parsed._isMalay = isMalay;
 
-        // Post-processing: unescape any literal \n sequences that survived JSON
-        // serialisation, so Discord renders proper paragraph breaks.
+        // Note: We only collapse 3+ consecutive newlines to 2.
+        // We do NOT do replace(/\\n/g, '\n') here (BUG-2 fix), keeping single canonical unescape in DiscordPublisher.js.
         if (parsed.exactText) {
-            parsed.exactText = parsed.exactText
-                .replace(/\\n/g, '\n')
-                .replace(/\n{3,}/g, '\n\n'); // collapse 3+ consecutive newlines to 2
+            parsed.exactText = parsed.exactText.replace(/\n{3,}/g, '\n\n');
         }
 
         return parsed;

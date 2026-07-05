@@ -19,14 +19,17 @@ if (!fs.existsSync(dbDir)) {
 
 const targetDbPath = path.join(dbDir, 'telegram_events.db');
 
+// Require logger lazily or directly
+const { logInfo, logError } = require('./logger');
+
 // Auto-copy existing legacy database to persistent path on first run
 if (targetDbPath !== legacyDbPath && !fs.existsSync(targetDbPath) && fs.existsSync(legacyDbPath)) {
-    console.log(`[Database] Copying existing telegram_events.db from legacy path to persistent location...`);
+    logInfo(`[Database] Copying existing telegram_events.db from legacy path to persistent location...`);
     fs.copyFileSync(legacyDbPath, targetDbPath);
 }
 
 const db = new sqlite3.Database(targetDbPath);
-console.log(`[Database] Using database at: ${targetDbPath}`);
+logInfo(`[Database] Using database at: ${targetDbPath}`);
 
 db.serialize(() => {
     // ── Seen messages (dedup by ID + content hash + SimHash fingerprint) ──────
@@ -67,6 +70,7 @@ db.serialize(() => {
     db.run(`ALTER TABLE telegram_events ADD COLUMN closed INTEGER DEFAULT 0`,    () => {});
     db.run(`ALTER TABLE telegram_events ADD COLUMN title_hash TEXT`,             () => {});
     db.run(`ALTER TABLE telegram_events ADD COLUMN posted_at INTEGER`,           () => {});
+    db.run(`ALTER TABLE telegram_events ADD COLUMN embedding BLOB`,              () => {});
     db.run(`CREATE INDEX IF NOT EXISTS idx_title_hash ON telegram_events (title_hash)`);
 
     // ── Telegram blacklist ──────────────────────────────────────────────────
@@ -76,30 +80,33 @@ db.serialize(() => {
         added_at INTEGER
     )`);
 
-    // ── Migration: Normalize legacy positive numeric IDs to -100 prefixed ───
-    db.all(`SELECT channel_id FROM telegram_channels`, [], (err, rows) => {
-        if (!err && rows) {
-            rows.forEach(row => {
-                if (/^\d+$/.test(row.channel_id)) {
-                    const newId = '-100' + row.channel_id;
-                    db.run(`UPDATE telegram_channels SET channel_id = ? WHERE channel_id = ?`, [newId, row.channel_id]);
-                }
-            });
-        }
-    });
-    db.all(`SELECT message_id, channel FROM seen_messages`, [], (err, rows) => {
-        if (!err && rows) {
-            rows.forEach(row => {
-                if (/^\d+$/.test(row.channel)) {
-                    const newChannel = '-100' + row.channel;
-                    // Fix composite message_id that contains the old channel ID
-                    const newMessageId = row.message_id.startsWith(row.channel + '_') 
-                        ? row.message_id.replace(row.channel + '_', newChannel + '_')
-                        : row.message_id;
-                    db.run(`UPDATE seen_messages SET channel = ?, message_id = ? WHERE channel = ? AND message_id = ?`, 
-                        [newChannel, newMessageId, row.channel, row.message_id]);
-                }
-            });
+    // ── Channel Cursors (for incremental scraping FLAW-7) ───────────────────
+    db.run(`CREATE TABLE IF NOT EXISTS channel_cursors (
+        channel_id      TEXT PRIMARY KEY,
+        last_message_id INTEGER,
+        updated_at      INTEGER
+    )`);
+    db.run(`ALTER TABLE channel_cursors ADD COLUMN last_message_id INTEGER`, () => {});
+
+    // ── Scrape Runs (for scraping statistics FEAT-3) ────────────────────────
+    db.run(`CREATE TABLE IF NOT EXISTS scrape_runs (
+        run_id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_at           INTEGER,
+        duration_sec     REAL,
+        channels_scraped INTEGER,
+        total_messages   INTEGER,
+        events_found     INTEGER
+    )`);
+
+    // ── Schema Migrations (FLAW-6: prevent bounded table scan on every boot) ─
+    db.run(`CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY)`);
+
+    db.get(`SELECT version FROM schema_migrations WHERE version = 'normalize_channel_ids_v1'`, [], (err, row) => {
+        if (!err && !row) {
+            logInfo(`[Database] Running one-time channel ID normalization migration...`);
+            db.run(`UPDATE telegram_channels SET channel_id = '-100' || channel_id WHERE channel_id NOT LIKE '-%' AND channel_id GLOB '[0-9]*'`);
+            db.run(`UPDATE seen_messages SET message_id = '-100' || message_id, channel = '-100' || channel WHERE channel NOT LIKE '-%' AND channel GLOB '[0-9]*'`);
+            db.run(`INSERT INTO schema_migrations (version) VALUES ('normalize_channel_ids_v1')`);
         }
     });
 });
@@ -109,10 +116,10 @@ db.serialize(() => {
 // on Ctrl+C, Docker restarts, or server reboots mid-write
 
 function closeDb(signal) {
-    console.log(`\n[System] ${signal} received — closing database...`);
+    logInfo(`\n[System] ${signal} received — closing database...`);
     db.close((err) => {
-        if (err) console.error('[Database] Error closing DB:', err.message);
-        else console.log('[Database] Closed successfully.');
+        if (err) logError(`[Database] Error closing DB: ${err.message}`);
+        else logInfo('[Database] Closed successfully.');
         process.exit(0);
     });
 }

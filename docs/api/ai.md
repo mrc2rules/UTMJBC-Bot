@@ -35,7 +35,7 @@ Invokes `ai.models.generateContent()` with built-in timeout wrapping (`Promise.r
 
 ### `getGeminiResponse(prompt)`
 
-Calls `AIGateway.generateContent()` using Gemini 2.5 Flash with Google Search grounding restricted strictly to `utm.my` and `utm.gitbook.io`. Verified numeric source citations are appended under a `**Sources:**` footer while defending against Discord's 2,000-character limit. Used by the `/askai` command.
+Calls `AIGateway.generateContent()` using Gemini 2.5 Flash with Google Search grounding restricted strictly to `utm.my` and `utm.gitbook.io`. Used by the `/askai` command.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|

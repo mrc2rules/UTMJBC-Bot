@@ -59,9 +59,14 @@ async function start(discordClient) {
 
     // ── Auto-close schedule (still runs automatically) ──────────────────────
     cron.schedule('0 0 * * *', () => autoClosePastEvents(discordClient));
-    autoClosePastEvents(discordClient).catch(err =>
+    const runAutoClose = () => autoClosePastEvents(discordClient).catch(err =>
         logError(`[AutoClose] Error on startup: ${err.message}`)
     );
+    if (discordClient.isReady()) {
+        runAutoClose();
+    } else {
+        discordClient.once('ready', runAutoClose);
+    }
 
     logInfo('[TelegramListener] Ready. Use /scrape to start a scrape cycle.');
 }

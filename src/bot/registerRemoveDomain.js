@@ -20,18 +20,16 @@ module.exports = async function registerRemoveDomain(guildId, domainCommand = re
 
             let domainCommandData = domainCommand.data.toJSON()
 
-            // Find the 'remove' subcommand and update its choices
-            const removeSubcommand = domainCommandData.options.find(opt => opt.name === "remove")
-            if (removeSubcommand && removeSubcommand.options) {
-                const domainsOption = removeSubcommand.options.find(opt => opt.name === "domains")
-                if (domainsOption) {
-                    if (serverSettings.domains.length > 0 && serverSettings.domains.length <= 25) {
-                        domainsOption.choices = serverSettings.domains.map(domain => {
-                            return {"name": truncateString(domain), "value": truncateString(domain)}
-                        })
-                    } else {
-                        domainsOption.choices = undefined
-                    }
+            // Find the 'domains' option (top-level in refactored command or in legacy 'remove' subcommand)
+            const domainsOption = domainCommandData.options.find(opt => opt.name === "domains") ||
+                                  domainCommandData.options.find(opt => opt.name === "remove")?.options?.find(opt => opt.name === "domains");
+            if (domainsOption) {
+                if (serverSettings.domains.length > 0 && serverSettings.domains.length <= 25) {
+                    domainsOption.choices = serverSettings.domains.map(domain => {
+                        return {"name": truncateString(domain), "value": truncateString(domain)}
+                    })
+                } else {
+                    domainsOption.choices = undefined
                 }
             }
 

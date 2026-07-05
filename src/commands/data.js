@@ -6,36 +6,29 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('data')
         .setDescription('Manage stored data for privacy and compliance')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('delete-user')
-                .setDescription('Delete your personal verification data and remove your verified status')
-                .addStringOption(option =>
-                    option
-                        .setName('confirm')
-                        .setDescription('Type "delete" to confirm deletion of your data')
-                        .setRequired(true)
+        .addStringOption(option =>
+            option
+                .setName('action')
+                .setDescription('Action to perform')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Delete User Data (My Data)', value: 'delete-user' },
+                    { name: 'Delete Server Data (Admin Only)', value: 'delete-server' }
                 )
         )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('delete-server')
-                .setDescription('Delete all server data and remove the bot from this server (requires administrator permissions)')
-                .addStringOption(option =>
-                    option
-                        .setName('confirm')
-                        .setDescription('Type "delete" to confirm - THIS WILL REMOVE THE BOT')
-                        .setRequired(true)
-                )
+        .addStringOption(option =>
+            option
+                .setName('confirm')
+                .setDescription('Type "delete" to confirm deletion of data')
+                .setRequired(true)
         )
-        .setDefaultMemberPermissions(null), // null allows everyone to use delete-user, but delete-server is admin-only in execute
+        .setDefaultMemberPermissions(null),
 
     async execute(interaction) {
-        const subcommand = interaction.options.getSubcommand();
+        const action = interaction.options.getString('action');
+        const confirm = interaction.options.getString('confirm', true);
 
-        if (subcommand === 'delete-user') {
-            const confirm = interaction.options.getString('confirm', true);
-            
+        if (action === 'delete-user') {
             if (confirm !== 'delete') {
                 await interaction.reply({
                     content: "❌ **Confirmation failed.**\n\nTo delete your data, type `delete` in the confirm field.\n\n⚠️ This will:\n• Remove your verified status on this server\n• Delete your stored email hash\n• Require you to verify again",
@@ -51,27 +44,24 @@ module.exports = {
                 const member = interaction.guild.members.cache.get(interaction.user.id);
                 
                 if (member !== undefined) {
-                    // Remove all default roles
                     const defaultRoles = serverSettings.defaultRoles || [];
                     for (const roleId of defaultRoles) {
-                        const role = interaction.guild.roles.cache.get(roleId);
-                        if (role) {
-                            await member.roles.remove(role).catch(() => {});
+                        const r = interaction.guild.roles.cache.get(roleId);
+                        if (r) {
+                            await member.roles.remove(r).catch(() => {});
                         }
                     }
                     
-                    // Remove all domain-specific roles (we don't know which domain the user verified with)
                     const domainRoles = serverSettings.domainRoles || {};
                     for (const pattern of Object.keys(domainRoles)) {
                         for (const roleId of domainRoles[pattern]) {
-                            const role = interaction.guild.roles.cache.get(roleId);
-                            if (role) {
-                                await member.roles.remove(role).catch(() => {});
+                            const r = interaction.guild.roles.cache.get(roleId);
+                            if (r) {
+                                await member.roles.remove(r).catch(() => {});
                             }
                         }
                     }
                     
-                    // Re-add unverified role
                     if (roleUnverified !== undefined) {
                         await member.roles.add(roleUnverified).catch(() => {});
                     }
@@ -85,8 +75,7 @@ module.exports = {
             return;
         }
 
-        if (subcommand === 'delete-server') {
-            // Check admin permissions for server deletion
+        if (action === 'delete-server') {
             if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
                 await interaction.reply({
                     content: "❌ **Permission denied.**\n\nOnly server administrators can delete server data.",
@@ -95,8 +84,6 @@ module.exports = {
                 return;
             }
 
-            const confirm = interaction.options.getString('confirm', true);
-            
             if (confirm !== 'delete') {
                 await interaction.reply({
                     content: "❌ **Confirmation failed.**\n\nTo delete server data, type `delete` in the confirm field.\n\n⚠️ **Warning:** This will:\n• Delete all server configuration\n• Delete all verification records\n• Remove the bot from this server",

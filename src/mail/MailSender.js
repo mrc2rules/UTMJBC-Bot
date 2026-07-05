@@ -4,6 +4,7 @@ const nodemailer = require("nodemailer");
 const {defaultLanguage, getLocale} = require("../Language");
 const database = require("../database/Database");
 const { MessageFlags, EmbedBuilder } = require('discord.js');
+const { logInfo, logError } = require('../shared/logger');
 
 if (typeof username === 'undefined') {
     username = email;
@@ -80,10 +81,9 @@ module.exports = class MailSender {
             this.transporter.sendMail(mailOptions, async (error, info) => {
                 if (error || info.rejected.length > 0) {
                     if (emailNotify) {
-                        console.log('EMAIL ERROR for:', toEmail);
-                        console.log('Error details:', error);
-                        if (info && info.rejected.length > 0) console.log('Rejected emails:', info.rejected);
-                        if (info && info.response) console.log('SMTP Response:', info.response);
+                        logError(`EMAIL ERROR for: ${toEmail} | Error details: ${error?.message || error}`);
+                        if (info && info.rejected.length > 0) logError(`Rejected emails: ${JSON.stringify(info.rejected)}`);
+                        if (info && info.response) logError(`SMTP Response: ${info.response}`);
                     }
 
                     const errorEmbed = new EmbedBuilder()
@@ -101,10 +101,7 @@ module.exports = class MailSender {
                     database.incrementMailsSent(serverId);
                     callback(info.accepted[0]);
                     if (emailNotify) {
-                        console.log('EMAIL SUCCESS for:', toEmail);
-                        console.log('Accepted emails:', info.accepted);
-                        console.log('Message ID:', info.messageId);
-                        console.log('SMTP Response:', info.response);
+                        logInfo(`EMAIL SUCCESS for: ${toEmail} | Accepted: ${JSON.stringify(info.accepted)} | Message ID: ${info.messageId}`);
                     }
                 }
             });

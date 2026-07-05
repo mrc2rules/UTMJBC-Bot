@@ -60,7 +60,7 @@ class ServerStatsAPI {
         const MAX_REQUESTS = 60;
 
         this.app.use((req, res, next) => {
-            const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+            const ip = req.socket.remoteAddress || 'unknown';
             const now = Date.now();
             let record = rateLimitMap.get(ip);
 
@@ -203,7 +203,7 @@ class ServerStatsAPI {
     start() {
         if (this.started) return;
         this.started = true;
-        this.app.listen(this.port, '0.0.0.0', () => {
+        this.app.listen(this.port, () => {
             console.log(`App listening on port ${this.port}!`);
         });
     }
