@@ -81,7 +81,11 @@ class AIGateway {
             return response;
         } catch (err) {
             this.failureCount++;
-            logError(`[AIGateway] Error during generateContent (${this.failureCount}/${this.CIRCUIT_THRESHOLD}): ${err.message}`);
+            // Extract HTTP status/code if available (e.g. 429, 400 from @google/genai)
+            const status = err.status || err.statusCode || err.httpStatus || (err.response && err.response.status) || '';
+            const code   = err.code || err.errorDetails?.[0]?.reason || '';
+            const detail = [status, code].filter(Boolean).join(' | ');
+            logError(`[AIGateway] Error during generateContent (${this.failureCount}/${this.CIRCUIT_THRESHOLD}): ${err.message}${detail ? ` [${detail}]` : ''}`);
 
             if (this.failureCount >= this.CIRCUIT_THRESHOLD) {
                 this.circuitOpenUntil = Date.now() + this.CIRCUIT_COOLDOWN_MS;

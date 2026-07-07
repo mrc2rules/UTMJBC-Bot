@@ -19,9 +19,9 @@ function sanitizeJsonString(raw) {
     let result = '';
     let inString = false;
     let escapeNext = false;
-    
-    for (let i = 0; i < str.length; i++) {
-        const char = str[i];
+
+    // Use spread to iterate by Unicode code point (handles emoji/surrogate pairs correctly)
+    for (const char of str) {
         if (escapeNext) {
             result += char;
             escapeNext = false;
@@ -44,7 +44,7 @@ function sanitizeJsonString(raw) {
                 // ignore carriage return inside string
             } else if (char === '\t') {
                 result += '\\t';
-            } else if (char.charCodeAt(0) < 32) {
+            } else if (char.codePointAt(0) < 32) {
                 // ignore other control characters
             } else {
                 result += char;
@@ -231,8 +231,11 @@ async function analyseWithGemini(text, modelName = 'gemini-2.5-flash') {
 
         return parsed;
     } catch (e) {
-        logError(`[GeminiAnalyser] Gemini error: ${e.message}`);
-        return { isEvent: false, _error: true };
+        const isCircuitOpen = e.message && e.message.includes('Circuit breaker is OPEN');
+        if (!isCircuitOpen) {
+            logError(`[GeminiAnalyser] Gemini API error: ${e.message}`);
+        }
+        return { isEvent: false, _error: true, _circuitOpen: isCircuitOpen };
     }
 }
 

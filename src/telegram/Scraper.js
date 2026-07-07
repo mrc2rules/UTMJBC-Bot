@@ -206,6 +206,10 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
             const result = await analyseWithGemini(msg.message, scraperModel);
 
             if (result._error) {
+                if (result._circuitOpen) {
+                    logWarn(`[Scraper] Circuit breaker OPEN — pausing ${channelId} until next cycle`);
+                    break; // All further calls will also fail; wait for cooldown
+                }
                 logWarn(`[Scraper] Gemini failed for ${channelId} msg ${msg.id}, will retry next cycle`);
                 continue;
             }
