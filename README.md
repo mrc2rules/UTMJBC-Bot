@@ -46,7 +46,7 @@ flowchart TB
         F["Scraper.js"]
         E["TelegramListener"]
         G["GeminiAnalyser.js"]
-        H["GeminiAnalyser.js"]
+        H["DiscordPublisher.js"]
   end
     A["sharder.js <br>(Discord ShardingManager)"] -- spawns --> B["EmailBot.js <br>(Main Discord process)"]
     B --> C["Email System (MailSender)"] & D["Gemini Query (/askai)"] & TP
