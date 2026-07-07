@@ -53,7 +53,9 @@ UTMJBC Bot is a resilient architecture designed specifically for university Disc
     Monitors public campus Telegram broadcasts and syndicates rich, structured event cards directly into Discord forum threads.
 
     - **Multi-Layer Deduplication:** Filters broadcast noise using a 4-tier pipeline (Message ID → MD5 Content Hash → 64-bit SimHash near-duplicate detection → Title Hash).
-    - **Gemini 2.5 Flash via `@google/genai`:** Automatically classifies posts, extracts key metadata (date, location, cost, merit points, registration links), and translates Malay announcements into English.
+    - **Gemini AI via `@google/genai`:** Automatically classifies posts, extracts key metadata (date, location, cost, merit points, registration links), and translates Malay announcements into English.
+    - **Interactive Spam Moderation:** Community members can click "🚨 Report as Spam" on event cards to send interactive moderation alerts (with thread deletion and dismissal buttons) directly to admin report channels.
+    - **Dynamic Model Routing:** Admins can customize the underlying Gemini AI model per-server (e.g., switching between Flash and Pro tiers) using the `/config type:models` command.
     - **Circuit Breaker Resilience:** Automated timeout recovery and rate-limit circuit breaking via `AIGateway`.
     - **Automated Lifecycle:** Automatically locks and archives forum threads once event end-dates have passed.
 
@@ -63,6 +65,7 @@ UTMJBC Bot is a resilient architecture designed specifically for university Disc
 
     - **Command:** `/askai <question>`
     - **Authoritative Grounding:** Restricts search strictly to official sources (`utm.my` and `utm.gitbook.io`).
+    - **Dynamic Model Configuration:** Admins can tailor the AI chatbot's model per-server via `/config type:models`.
     - **Public Access:** Available to any server member without administrative privileges.
 
 ---

@@ -46,7 +46,6 @@ Create a `config/config.json` file in the project root directory.
   "telegramPassword":           "",
   "telegramSession":            "",
   "telegramScrapeIntervalHours": 6,
-  "telegramScrapeLimit":        20,
   "telegramSimHashThreshold":   5,
   "discordEventForumId":        "1519270170873565405",
   "discordLiveLogId":           "1519284305464004678",

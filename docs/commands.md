@@ -37,10 +37,10 @@ Every user who completes verification receives all roles listed in the default s
 
 | Command | Description |
 |---------|-------------|
-| `/role add <role>` | Adds a Discord role to the default verified set. |
-| `/role remove <role>` | Removes a role from the default set. |
-| `/role list` | Lists all configured default roles. |
-| `/role unverified [role]` | Sets the optional unverified role. Select the currently configured role to clear it. |
+| `/verifiedrole action:add role:[@Role]` | Adds a Discord role to the default verified set. |
+| `/verifiedrole action:remove role:[@Role]` | Removes a role from the default set. |
+| `/verifiedrole action:list` | Lists all configured default roles. |
+| `/verifiedrole action:unverified role:[@Role]` | Sets the optional unverified role. Select the currently configured role to clear it. |
 
 #### Domain-Specific Roles
 
@@ -48,13 +48,13 @@ Assigns additional specialized roles based on the user's email domain. These rol
 
 | Command | Description |
 |---------|-------------|
-| `/domainrole add <domain> <role>` | Maps a specific domain pattern to a Discord role. |
-| `/domainrole remove <domain> <role>` | Removes a domain-to-role mapping. |
-| `/domainrole list` | Displays all active domain-to-role mappings. |
-| `/domainrole clear <domain>` | Clears all role mappings for a specific domain. |
+| `/domainrole action:add domain:[pattern] role:[@Role]` | Maps a specific domain pattern to a Discord role. |
+| `/domainrole action:remove domain:[pattern] role:[@Role]` | Removes a domain-to-role mapping. |
+| `/domainrole action:list` | Displays all active domain-to-role mappings. |
+| `/domainrole action:clear domain:[pattern]` | Clears all role mappings for a specific domain. |
 
 !!! tip "Autocomplete Support"
-    When typing `/domainrole add`, the `<domain>` field provides autocomplete options populated directly from your allowed `/domain` list.
+    When typing `/domainrole action:add`, the `domain` parameter provides autocomplete options populated directly from your allowed `/domain` list.
 
 ---
 
@@ -64,10 +64,10 @@ Specifies which email domain patterns are accepted during verification. Supports
 
 | Command | Description |
 |---------|-------------|
-| `/domain add <domains>` | Adds one or more allowed email domains (comma-separated). |
-| `/domain remove <domains>` | Removes allowed domains (supports autocomplete). |
-| `/domain list` | Displays all currently allowed domains. |
-| `/domain clear` | Wipes the allowlist, effectively pausing verifications. |
+| `/domain action:add domains:[text]` | Adds one or more allowed email domains (comma-separated). |
+| `/domain action:remove domains:[text]` | Removes allowed domains (supports autocomplete). |
+| `/domain action:list` | Displays all currently allowed domains. |
+| `/domain action:clear` | Wipes the allowlist, effectively pausing verifications. |
 
 **Wildcard Pattern Examples:**
 
@@ -85,22 +85,24 @@ Blocks specific email addresses or wildcard patterns. The blacklist takes **prec
 
 | Command | Description |
 |---------|-------------|
-| `/blacklist add <patterns>` | Adds patterns to the blocklist (comma-separated, `*` wildcard). |
-| `/blacklist remove <patterns>` | Removes patterns from the blocklist (supports autocomplete). |
-| `/blacklist list` | Displays all blocked patterns. |
-| `/blacklist clear` | Clears the entire blacklist. |
+| `/blacklist action:add emails:[text]` | Adds patterns to the blocklist (comma-separated, `*` wildcard). |
+| `/blacklist action:remove emails:[text]` | Removes patterns from the blocklist (supports autocomplete). |
+| `/blacklist action:list` | Displays all blocked patterns. |
+| `/blacklist action:clear` | Clears the entire blacklist. |
 
 ---
 
-### :material-cog: Bot Settings
+### :material-cog: Bot Settings & Model Configuration
 
 | Command | Description |
 |---------|-------------|
-| `/settings language <lang>` | Sets UI language (`english`, `german`, `spanish`, `polish`, `hebrew`, `korean`). |
-| `/settings log-channel [channel]` | Sets a channel for verification audit logs. Leave empty to disable. |
-| `/settings verify-message [message]` | Prepends custom text to OTP emails. Leave empty to reset to default. |
-| `/settings auto-verify <enable>` | Automatically DMs new members prompting them to verify on join. |
-| `/settings auto-unverified <enable>` | Automatically assigns the configured unverified role on join. |
+| `/config type:events [forum_channel] [report_channel]` | Configures the Discord forum channel for Telegram events and the alert channel for spam reports. |
+| `/config type:models [chatbot_model] [scraper_model]` | Configures custom Gemini AI model names (free-form strings, e.g. `gemini-2.5-pro`) for `/askai` and the scraper. |
+| `/settings language:[lang]` | Sets UI language (`english`, `german`, `spanish`, `polish`, `hebrew`, `korean`). |
+| `/settings log_channel:[#channel]` | Sets a channel for verification audit logs. Leave empty to disable. |
+| `/settings verify_message:[text]` | Prepends custom text to OTP emails. Leave empty to reset to default. |
+| `/settings promptnewtoverify:[true|false]` | Automatically DMs new members prompting them to verify on join. |
+| `/settings auto_unverified:[true|false]` | Automatically assigns the configured unverified role on join. |
 
 ---
 
@@ -108,12 +110,11 @@ Blocks specific email addresses or wildcard patterns. The blacklist takes **prec
 
 | Command | Description |
 |---------|-------------|
-| `/button <channel> <buttontext> [title] [message] [color]` | Posts a persistent verification embed with an interactive button. |
-| `/manualverify <user> <email>` | Bypasses OTP flow to manually verify a user. Logs to the audit channel. |
-| `/set_error_notify owner` | Sends system error notifications to the guild owner (default). |
-| `/set_error_notify channel <channel>` | Directs system error notifications to a specific channel. |
-| `/set_error_notify user <user>` | Directs system error notifications to a specific user via DM. |
-| `/set_error_notify status` | Displays the current error notification routing configuration. |
+| `/button channel:[#channel] buttontext:[text] [title] [message] [color]` | Posts a persistent verification embed with an interactive button. |
+| `/manualverify user:[@User] email:[email]` | Bypasses OTP flow to manually verify a user. Logs to the audit channel. |
+| `/errornotify target_type:owner` | Sends system error notifications to the guild owner (default). |
+| `/errornotify target_type:channel channel:[#channel]` | Directs system error notifications to a specific channel. |
+| `/errornotify target_type:user user:[@User]` | Directs system error notifications to a specific user via DM. |
 
 ---
 
@@ -133,8 +134,8 @@ Blocks specific email addresses or wildcard patterns. The blacklist takes **prec
 
 | Command | Description |
 |---------|-------------|
-| `/data delete-user` | *(User)* Deletes your own verification records across all guilds. |
-| `/data delete-server` | *(Admin)* Wipes all server configuration and user mappings for this guild. |
+| `/data action:delete-user` | *(User)* Deletes your own verification records across all guilds. |
+| `/data action:delete-server confirm:YES` | *(Admin)* Wipes all server configuration and user mappings for this guild. |
 
 ---
 
@@ -144,16 +145,18 @@ Controls the automated event feed pipeline connecting Telegram broadcasts to Dis
 
 | Command | Description |
 |---------|-------------|
-| `/scrape [run]` | Triggers an immediate, manual scrape cycle across all tracked channels. |
-| `/scrape start` | Starts background automated periodic scraping. |
-| `/scrape stop` | Stops background periodic scraping. |
-| `/addchannel <channel_id>` | Adds a Telegram channel (`@username` or numeric `-100...` ID) to monitor. |
-| `/removechannel <channel_id>` | Stops monitoring a specific Telegram channel. |
-| `/listchannels` | Displays all currently monitored Telegram channels. |
-| `/tgblacklist add <keyword>` | Suppresses broadcast messages containing `<keyword>`. |
-| `/tgblacklist remove <keyword>` | Removes a keyword from the scraper blocklist. |
-| `/tgblacklist list` | Displays all active scraper blocklist keywords. |
-| `/tgblacklist clear` | Clears all scraper blocklist keywords. |
+| `/scrape action:run [channel] [force]` | Triggers an immediate, manual scrape cycle across all (or a specific) tracked channels. |
+| `/scrape action:start` | Starts background automated periodic scraping. |
+| `/scrape action:stop` | Aborts any active scrape cycle and disables background periodic scraping. |
+| `/clear seendb [channel]` | Clears the database history of processed messages (allows rescraping). |
+| `/clear lastmsgdb [channel]` | Clears the last processed message ID cursor (resets scraping progress). |
+| `/channel action:add channel:[#channel]` | Adds a Telegram channel (`@username` or numeric `-100...` ID) to monitor. |
+| `/channel action:remove channel:[#channel]` | Stops monitoring a specific Telegram channel. |
+| `/channel action:list` | Displays all currently monitored Telegram channels. |
+| `/tgblacklist action:add keyword:[text]` | Suppresses broadcast messages containing `<keyword>`. |
+| `/tgblacklist action:remove keyword:[text]` | Removes a keyword from the scraper blocklist. |
+| `/tgblacklist action:list` | Displays all active scraper blocklist keywords. |
+| `/tgblacklist action:clear` | Clears all scraper blocklist keywords. |
 
 ---
 

@@ -76,5 +76,18 @@ Sends an admin error notification to the guild's configured destination. Returns
 | `errorTitle` | `string` | ✅ | Short title shown in the embed. |
 | `errorMessage` | `string` | ✅ | Detailed description for admins. |
 | `user` | `Discord.User` | — | User who triggered the error. |
-| `interaction` | `Discord.Interaction` | — | Interaction to reply to. |
 | `language` | `string` | — | Locale code for embedded strings (default `'english'`). |
+
+---
+
+## `src/shared/logger.js`
+
+Centralized ANSI logging service providing daily file rotation, colorized console output, and buffered Discord log channel broadcasting.
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `logger.info(category, message, ...args)` | `(string, string, ...any)` | Logs informational messages with green ANSI tags. |
+| `logger.warn(category, message, ...args)` | `(string, string, ...any)` | Logs warnings with yellow ANSI tags and buffers for Discord broadcast. |
+| `logger.error(category, message, ...args)` | `(string, string, ...any)` | Logs errors with red ANSI tags, outputs stack traces, and buffers for Discord broadcast. |
+| `logger.debug(category, message, ...args)` | `(string, string, ...any)` | Logs verbose debugging data (only displayed if debug mode is active). |
+| `logger.setDiscordClient(client, channelId)` | `(Discord.Client, string)` | Attaches the Discord client and target channel ID for broadcasting buffered logs. |

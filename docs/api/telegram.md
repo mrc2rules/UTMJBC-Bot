@@ -77,7 +77,54 @@ Builds a Discord embed from Gemini event data and creates a forum thread. Persis
     - Applies Discord forum tags based on `topic`, `merit`, `cost`, and event type.
     - Generates a Google Calendar deep-link button if the event has a valid start date.
     - Adds an interactive "Register Now" button if `registrationUrl` is present.
+    - Attaches an interactive "🚨 Report as Spam" button that triggers community moderation alerts via `SpamHandler`.
     - Truncates descriptions gracefully when exceeding Discord's 4,096-character embed limit.
+
+---
+
+## `src/telegram/SpamHandler.js`
+
+Handles interactive community spam reporting and moderator review workflows for published Discord forum threads.
+
+### `handleSpamButton(interaction)`
+
+Triggered when a community member clicks `🚨 Report as Spam` on a published event embed.
+1. Checks if a spam report has already been posted for this thread or if it was previously dismissed by an admin.
+2. If new, builds a high-visibility alert embed with thread details, message snippet, and quick-action buttons (`🗑️ Delete Thread` and `🔕 Dismiss Report`).
+3. Posts the alert to the server's configured `reportChannelID` (set via `/config type:events`).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `interaction` | `Discord.ButtonInteraction` | The button interaction object containing customId `report_spam_<threadId>`. |
+
+**Returns:** `Promise<void>`
+
+### `handleDeleteEvent(interaction)`
+
+Triggered when an admin clicks `🗑️ Delete Thread` on a spam alert in the moderation channel.
+1. Verifies the moderator has `Manage Messages` or `Manage Channels` permission.
+2. Deletes the target Discord forum thread from the server.
+3. Removes the event entry from the SQLite `telegram_events` table so it is no longer tracked.
+4. Updates the alert embed to show a greyed-out `🗑️ Thread Deleted` confirmation state.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `interaction` | `Discord.ButtonInteraction` | The button interaction object containing customId `delete_event_<threadId>`. |
+
+**Returns:** `Promise<void>`
+
+### `handleDismissReport(interaction)`
+
+Triggered when an admin clicks `🔕 Dismiss Report` on a spam alert.
+1. Verifies moderator permissions.
+2. Updates the alert embed to show a greyed-out `🔕 Report Dismissed` state.
+3. Subsequent clicks on `🚨 Report as Spam` for that thread will be silently ignored by checking the dismissed state.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `interaction` | `Discord.ButtonInteraction` | The button interaction object containing customId `dismiss_report_<threadId>`. |
+
+**Returns:** `Promise<void>`
 
 ---
 

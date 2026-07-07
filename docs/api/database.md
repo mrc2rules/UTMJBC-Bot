@@ -38,11 +38,15 @@ Singleton exported as `module.exports`. All callback-based methods pass the resu
 | `unverifiedRoleName` | `string` | `''` | Unverified role ID. |
 | `language` | `string` | `'english'` | Bot locale. |
 | `logChannel` | `string` | `''` | Channel ID for verification logs. |
-| `autoVerify` | `boolean` | `false` | Auto-DM new members. |
+| `autoVerify` | `boolean` | `false` | Auto-DM new members (configured via `promptnewtoverify`). |
 | `autoAddUnverified` | `boolean` | `false` | Auto-assign unverified role on join. |
 | `verifyMessage` | `string` | `''` | Custom text prepended to emails. |
-| `errorNotifyType` | `string` | `'owner'` | `'owner'`, `'channel'`, or `'user'`. |
+| `errorNotifyType` | `string` | `'owner'` | `'owner'`, `'channel'`, or `'user'` (configured via `/errornotify`). |
 | `errorNotifyTarget` | `string` | `''` | Channel or user ID for error notifications. |
+| `forumChannelID` | `string` | `'1519270170873565405'` | Discord forum channel for published Telegram events. |
+| `reportChannelID` | `string` | `'1519284305464004678'` | Discord channel for interactive spam reports and moderation alerts. |
+| `chatbotModel` | `string` | `'gemini-2.5-flash'` | Gemini model name used by `/askai` (configured via `/config type:models`). |
+| `scraperModel` | `string` | `'gemini-2.5-flash'` | Gemini model name used by the Telegram event scraper. |
 | `status` | `boolean` | computed | `true` if domains and defaultRoles are configured. |
 
 ---

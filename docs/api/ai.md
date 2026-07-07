@@ -33,13 +33,14 @@ Invokes `ai.models.generateContent()` with built-in timeout wrapping (`Promise.r
 
 ## `src/gemini/getGeminiResponse.js`
 
-### `getGeminiResponse(prompt)`
+### `getGeminiResponse(prompt, modelName?)`
 
-Calls `AIGateway.generateContent()` using Gemini 2.5 Flash with Google Search grounding restricted strictly to `utm.my` and `utm.gitbook.io`. Used by the `/askai` command.
+Calls `AIGateway.generateContent()` using the dynamically configured Gemini model (defaulting to `'gemini-2.5-flash'`, customized per-server via `/config type:models`) with Google Search grounding restricted strictly to `utm.my` and `utm.gitbook.io`. Used by the `/askai` command.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `prompt` | `string` | The user's question. |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `prompt` | `string` | required | The user's question. |
+| `modelName` | `string` | `'gemini-2.5-flash'` | Optional override for the target Gemini model name. |
 
 **Returns:** `Promise<string>` — Markdown-formatted response string. Returns an error message string on failure (does not throw).
 
@@ -50,13 +51,14 @@ Calls `AIGateway.generateContent()` using Gemini 2.5 Flash with Google Search gr
 
 ## `src/telegram/GeminiAnalyser.js`
 
-### `analyseWithGemini(text)`
+### `analyseWithGemini(text, modelName?)`
 
-Sends `text` to the Gemini 2.5 Flash API via AIGateway and returns structured event data.
+Sends `text` to the Gemini API via AIGateway using the configured scraper model (defaulting to `'gemini-2.5-flash'`, customized per-server via `/config type:models`) and returns structured event data.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `text` | `string` | Raw Telegram message text. |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `text` | `string` | required | Raw Telegram message text. |
+| `modelName` | `string` | `'gemini-2.5-flash'` | Optional override for the target Gemini model name. |
 
 **Returns:** `Promise<object>` — Resolving to one of:
 

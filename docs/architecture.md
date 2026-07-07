@@ -40,11 +40,13 @@ graph TD
 | `src/mail/MailSender.js` | SMTP email dispatch client using `nodemailer`. Supports custom templates and OAuth2/App passwords. |
 | `src/telegram/TelegramListener.js` | MTProto Telegram client using GramJS. Orchestrates background cron schedules (`startScrapeCron`). |
 | `src/telegram/Scraper.js` | Core scraping engine. Iterates messages through deduplication gates, calls Gemini AI, and dispatches forum threads. |
-| `src/telegram/GeminiAnalyser.js` | Event classification logic delegating to `AIGateway` for Gemini 2.5 Flash structured JSON extraction. |
-| `src/telegram/DiscordPublisher.js` | Formats embeds, creates forum threads, generates Google Calendar links, and tracks thread IDs. |
+| `src/telegram/GeminiAnalyser.js` | Event classification logic delegating to `AIGateway` for Gemini structured JSON extraction. |
+| `src/telegram/DiscordPublisher.js` | Formats embeds, attaches `🚨 Report as Spam` buttons, creates forum threads, generates Google Calendar links, and tracks thread IDs. |
+| `src/telegram/SpamHandler.js` | Community spam reporting and interactive admin moderation workflow. Manages deduplicated alerts and thread deletion/dismissal buttons. |
 | `src/telegram/MessageChecker.js` | Cryptographic fingerprinting tools: MD5 content hashing, 64-bit SimHash near-duplicate detection, title window lookups. |
 | `src/services/AIGateway.js` | Centralized AI service wrapper around Google's `@google/genai` SDK with automatic timeouts and Circuit Breaker logic. |
 | `src/prompts/` | Decoupled prompt template modules (`utmAssistantPrompt.js`, `eventExtractorPrompt.js`). |
+| `src/shared/logger.js` | Centralized ANSI logging service with daily file rotation, colorized terminal output, and buffered Discord log channel broadcasting. |
 | `src/database/Database.js` | SQLite singleton managing `bot.db` (guild settings, email user records, verification metrics). |
 | `src/shared/db.js` | SQLite singleton managing `telegram_events.db` (processed message IDs, deduplication tables). |
 | `src/gemini/getGeminiResponse.js` | Grounded search handler for `/askai`, delegating to `AIGateway` with strictly scoped domain search filters. |
@@ -60,7 +62,7 @@ To prevent thread contention and isolate domain responsibilities, the bot mainta
 
     | Table Name | Description |
     |------------|-------------|
-    | `guilds` | Per-guild configuration (allowlists, blocklists, language settings, channel mappings). |
+    | `guilds` | Per-guild configuration (allowlists, blocklists, language settings, channel mappings, AI models). |
     | `userEmails` | Verified identity records storing **MD5-hashed** email addresses. |
     | `guild_stats` | Historical verification counts and mail dispatch tallies per guild. |
 
@@ -138,7 +140,7 @@ graph LR
     end
 
     subgraph External AI
-        D["Google Gemini API (gemini-2.5-flash)"]
+        D["Google Gemini API (configured model)"]
     end
 
     A -->|Calls| C
@@ -152,3 +154,39 @@ graph LR
 1. **Circuit Breaker Pattern**: To protect the bot from rate-limit loops during upstream Google outages (`429 Too Many Requests` or `503 Service Unavailable`), `AIGateway` maintains an internal error tracker. If 5 consecutive requests fail, the circuit trips open for **5 minutes**, immediately rejecting outbound calls without consuming CPU cycles or flooding log files.
 2. **Decoupled Prompt Management**: System instructions and multi-line few-shot extraction rules are decoupled from execution logic into dedicated template modules inside `src/prompts/` (`utmAssistantPrompt.js` and `eventExtractorPrompt.js`).
 3. **Pre-Parse Code Fence Sanitization**: LLMs occasionally wrap structured JSON outputs inside markdown code blocks (e.g., ` ```json ... ``` `). The pipeline runs pre-parse regex stripping before passing payload strings to `JSON.parse()`, preventing runtime parsing crashes.
+4. **Dynamic Model Routing**: Admin-configured Gemini model names (`chatbotModel` and `scraperModel` in SQLite `guilds` table) dynamically route API generation calls per server. This allows admins to upgrade or test specific models (e.g. `gemini-2.5-pro` vs `gemini-1.5-pro`) via `/config type:models` without touching code.
+
+---
+
+## :material-shield-alert: Interactive Spam Moderation & Audit Logging
+
+To protect community forums from broadcast noise or misclassified events, the Telegram pipeline incorporates an interactive community moderation loop and centralized audit logging.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Community Member
+    participant Pub as DiscordPublisher
+    participant Spam as SpamHandler.js
+    participant Mod as Admin Report Channel
+    actor Admin as Server Moderator
+
+    Pub->>User: Publishes Event Embed with "🚨 Report as Spam" button
+    User->>Spam: Clicks "🚨 Report as Spam"
+    Note over Spam: Check deduplication cache<br/>(1 alert per event thread)
+    Spam->>Mod: Posts interactive Alert Embed<br/>(with Delete Thread & Dismiss buttons)
+    alt Admin Clicks Delete Thread
+        Admin->>Spam: Clicks "🗑️ Delete Thread"
+        Spam->>Pub: Deletes Discord Forum Thread & SQLite record
+        Spam-->>Mod: Updates Alert Embed: "🗑️ Thread Deleted"
+    else Admin Clicks Dismiss Report
+        Admin->>Spam: Clicks "🔕 Dismiss Report"
+        Spam-->>Mod: Updates Alert Embed: "🔕 Report Dismissed"
+        Note over Spam: Ignore future spam clicks<br/>for this thread
+    end
+```
+
+### Centralized ANSI Logging System (`src/shared/logger.js`)
+All subsystems route diagnostic output through a centralized logging service that replaces standard console calls:
+- **Daily Log Rotation**: Writes timestamped logs to local filesystem archives (`logs/YYYY-MM-DD.log`).
+- **Buffered Discord Broadcasts**: Buffers system errors and critical warnings, transmitting them in batched, syntax-highlighted ANSI code blocks (`` ```ansi ``) to configured Discord admin log channels.
