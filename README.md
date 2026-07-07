@@ -30,18 +30,38 @@
 
 The official bot for the **UTMJBC** Discord server. It delivers three core features:
 
-1. **Email Verification** - Students enter their official university email (`@graduate.utm.my` or `@utm.my`), receive a secure 6-digit OTP via nodemailer, and are automatically assigned Discord roles based on domain verification.
-2. **Telegram Event Scraper** - Monitors public UTM Telegram channels and utilizes **Gemini models** via Google's modern `@google/genai` SDK to intelligently classify campus events. 
+1. **Email Verification** - Students enter their official university email (`@graduate.utm.my`), receive a secure 6-digit OTP via nodemailer, and are automatically assigned Discord roles based on domain verification.
+2. **Telegram Event Scraper** - It scrapes public UTM related Telegram channels and utilizes Gemini models via Google's `@google/genai` SDK to classify campus events. 
 \
 \
- Message's are passed through multilayer filter to prevent duplication. Event details are extracted via structured JSON mapping, and then published in a Discord forum channel. If required, the posts are also translated from Malay to English.
-3. **Grounded Campus Assistant (`/askai`)** - An interactive Discord AI assistant that answers student queries strictly grounded in authoritative institutional sources (`utm.my` and `utm.gitbook.io`), with sources linked at the end of each message.
+ Message's are passed through a multilayer filter to prevent duplication. Event details are extracted via structured JSON mapping, and then published in a Discord forum channel. If required, the posts are also translated from Malay to English.
+3. **Grounded Assistant (`/askai`)** - An interactive Discord AI assistant that answers student queries strictly grounded in authoritative institutional sources (`utm.my` and `utm.gitbook.io`), with sources linked at the end of each message. (No AI slop responses...)
+```mermaid
+---
+config:
+  layout: fixed
+---
+flowchart TB
+ subgraph TP["Telegram Pipeline"]
+        F["Scraper.js"]
+        E["TelegramListener"]
+        G["GeminiAnalyser.js"]
+        H["GeminiAnalyser.js"]
+  end
+    A["sharder.js <br>(Discord ShardingManager)"] -- spawns --> B["EmailBot.js <br>(Main Discord process)"]
+    B --> C["Email System (MailSender)"] & D["Gemini Query (/askai)"] & TP
+    E --> F & G & H
 
-### Reliability & Architecture Highlights
-- **Unified AIGateway & Circuit Breaker**: All AI interactions pass through a centralized service wrapper (`AIGateway`) with automated `Promise.race` timeouts (20–30s) and a circuit breaker that pauses requests after repeated API outages.
-- **Decoupled Prompt Management**: System prompts and few-shot extraction schemas are decoupled into dedicated modules (`src/prompts/`), keeping core application logic clean.
-- **Zero-Build Persistence**: Uses pre-compiled GLIBC binary distributions of `sqlite3` (`^5.1.7`) for seamless deployment across shared Linux servers and container environments.
-
+    style F fill:#3a3a3a,stroke:#888,color:#fff
+    style E fill:#3a3a3a,stroke:#888,color:#fff
+    style G fill:#3a3a3a,stroke:#888,color:#fff
+    style H fill:#3a3a3a,stroke:#888,color:#fff
+    style A fill:#5c1a3c,stroke:#a83a6b,color:#fff
+    style B fill:#5c1a3c,stroke:#a83a6b,color:#fff
+    style C fill:#3a3a3a,stroke:#888,color:#fff
+    style D fill:#3a3a3a,stroke:#888,color:#fff
+    style TP fill:#2a2f3a,stroke:#555,color:#ccc
+```
 > [!NOTE]
 > UTMJBC is an independent student-run community and is **not affiliated with or endorsed by Universiti Teknologi Malaysia (UTM)**.
 
