@@ -97,12 +97,15 @@ class AIGateway {
         }
     }
 
-    async embedContent({ model = 'text-embedding-004', contents }) {
+    async embedContent({ model = 'gemini-embedding-001', contents }) {
         try {
             const ai = this.getClient();
             const response = await ai.models.embedContent({
                 model,
-                contents
+                contents,
+                config: {
+                    outputDimensionality: 768
+                }
             });
             return response.embedding ? response.embedding.values : null;
         } catch (err) {
