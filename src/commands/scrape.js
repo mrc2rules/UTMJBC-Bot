@@ -32,12 +32,6 @@ module.exports = {
                 type: ApplicationCommandOptionType.Boolean,
                 required: false,
             },
-            {
-                name: 'cleardb',
-                description: 'Optional. Clear the seen_messages database only (no scrape is run).',
-                type: ApplicationCommandOptionType.Boolean,
-                required: false,
-            },
         ],
     },
 
@@ -67,19 +61,6 @@ module.exports = {
         const action        = interaction.options.getString('action') || 'run';
         const targetChannelId = interaction.options.getString('channel');
         const force           = interaction.options.getBoolean('force')   || false;
-        const cleardb         = interaction.options.getBoolean('cleardb') || false;
-
-        // ── cleardb mode (independent of action) ─────────────────────────────
-        if (cleardb) {
-            await interaction.deferReply({ ephemeral: true });
-            try {
-                const deleted = await clearSeenMessages();
-                return interaction.editReply(`🗑️ **Database Cleared**: Removed ${deleted} seen message records.`);
-            } catch (err) {
-                console.error('[ScrapeCommand] cleardb error:', err);
-                return interaction.editReply('❌ Failed to clear seen messages database.');
-            }
-        }
 
         // ── stop ──────────────────────────────────────────────────────────────
         if (action === 'stop') {

@@ -117,10 +117,8 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
         const fetchOpts = minId > 0 ? { limit: 50, minId } : { limit: scrapeLimit };
         const messages    = await state.telegramClient.getMessages(targetId, fetchOpts);
 
-        if (messages.length > 0) {
-            const maxId = Math.max(...messages.map(m => m.id));
-            await setChannelCursor(channelId, maxId);
-        }
+        // Sort messages in ascending order (chronologically oldest first) to ensure checkpoint cursor advances correctly
+        const sortedMessages = [...messages].sort((a, b) => a.id - b.id);
 
         let total = 0, skippedShort = 0, skippedSeen = 0, skippedDupe = 0,
             skippedNearDupe = 0, skippedHeuristic = 0, skippedPast = 0, skippedBlacklisted = 0,
@@ -128,136 +126,153 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
 
         logInfo(`[DEBUG] Channel ${channelId}: fetched ${messages.length} messages (minId=${minId})`);
 
-        for (const msg of messages) {
+        let hasErrorInRun = false;
+
+        for (const msg of sortedMessages) {
             if (state.cancelScrape) break;
             total++;
 
-            // Gate 0: Skip short/empty messages
-            if (!msg.message || msg.message.trim().length < 30) {
-                skippedShort++;
-                logInfo(`[Scraper] Skipped msg ${msg.id} (short/empty)`);
-                await markAsSeen(msg.id, channelId, null, null);
-                continue;
-            }
-
-            // Gate 1: Blacklist keyword filter
-            if (blacklist.length > 0) {
-                const matchedKeyword = blacklist.find(kw => {
-                    const regex = new RegExp(`\\b${kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
-                    return regex.test(msg.message);
-                });
-                if (matchedKeyword) {
-                    skippedBlacklisted++;
-                    logInfo(`[Scraper] Skipped msg ${msg.id} (blacklist: "${matchedKeyword}")`);
+            const success = await (async () => {
+                // Gate 0: Skip short/empty messages
+                if (!msg.message || msg.message.trim().length < 30) {
+                    skippedShort++;
+                    logInfo(`[Scraper] Skipped msg ${msg.id} (short/empty)`);
                     await markAsSeen(msg.id, channelId, null, null);
-                    continue;
-                }
-            }
-
-            const contentHash = hashMessageText(msg.message);
-            const simhash     = simHashText(msg.message);
-
-            if (!force) {
-                // Gate 2: Exact message ID
-                if (await isAlreadySeen(msg.id, channelId)) {
-                    skippedSeen++;
-                    logInfo(`[Scraper] Skipped msg ${msg.id} (seen by ID)`);
-                    continue;
+                    return true;
                 }
 
-                // Gate 3: Exact content hash
-                if (await isAlreadySeenByHash(contentHash)) {
-                    skippedDupe++;
-                    // BUG-3 fix: pass null for simhash on non-event / duplicate skips
+                // Gate 1: Blacklist keyword filter
+                if (blacklist.length > 0) {
+                    const matchedKeyword = blacklist.find(kw => {
+                        const regex = new RegExp(`\\b${kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+                        return regex.test(msg.message);
+                    });
+                    if (matchedKeyword) {
+                        skippedBlacklisted++;
+                        logInfo(`[Scraper] Skipped msg ${msg.id} (blacklist: "${matchedKeyword}")`);
+                        await markAsSeen(msg.id, channelId, null, null);
+                        return true;
+                    }
+                }
+
+                const contentHash = hashMessageText(msg.message);
+                const simhash     = simHashText(msg.message);
+
+                if (!force) {
+                    // Gate 2: Exact message ID
+                    if (await isAlreadySeen(msg.id, channelId)) {
+                        skippedSeen++;
+                        logInfo(`[Scraper] Skipped msg ${msg.id} (seen by ID)`);
+                        return true;
+                    }
+
+                    // Gate 3: Exact content hash
+                    if (await isAlreadySeenByHash(contentHash)) {
+                        skippedDupe++;
+                        // BUG-3 fix: pass null for simhash on non-event / duplicate skips
+                        await markAsSeen(msg.id, channelId, contentHash, null);
+                        logInfo(`[Scraper] Skipped msg ${msg.id} (exact duplicate)`);
+                        return true;
+                    }
+
+                    // Gate 4: Near-duplicate SimHash
+                    if (await isNearDuplicate(simhash)) {
+                        skippedNearDupe++;
+                        // BUG-3 fix: pass null for simhash so near-dupes don't pollute SimHash slots
+                        await markAsSeen(msg.id, channelId, contentHash, null);
+                        logInfo(`[Scraper] Skipped msg ${msg.id} (near duplicate)`);
+                        return true;
+                    }
+
+                    // Gate 4.5: Pre-Gemini Heuristic Fast-Skip (FEAT-7a)
+                    if (!hasEventSignals(msg.message)) {
+                        skippedHeuristic++;
+                        await markAsSeen(msg.id, channelId, contentHash, null);
+                        logInfo(`[Scraper] Skipped msg ${msg.id} (fails heuristic pre-filter)`);
+                        return true;
+                    }
+                }
+
+                // Global Gemini rate limit check across channels (FLAW-2 fix)
+                const now = Date.now();
+                if (context.lastGeminiCall > 0 && (now - context.lastGeminiCall) < 4200) {
+                    await sleep(4200 - (now - context.lastGeminiCall));
+                }
+                context.lastGeminiCall = Date.now();
+                sentToGemini++;
+
+                const langTag = detectMalay(msg.message) ? '[lang=Malay]' : '[lang=EN]';
+                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SENT TO GEMINI ${langTag}`);
+
+                const result = await analyseWithGemini(msg.message, scraperModel);
+
+                if (result._error) {
+                    if (result._circuitOpen) {
+                        logWarn(`[Scraper] Circuit breaker OPEN — pausing ${channelId} until next cycle`);
+                        return 'break';
+                    }
+                    logWarn(`[Scraper] Gemini failed for ${channelId} msg ${msg.id}, will retry next cycle`);
+                    return false;
+                }
+
+                if (!result.isEvent) {
                     await markAsSeen(msg.id, channelId, contentHash, null);
-                    logInfo(`[Scraper] Skipped msg ${msg.id} (exact duplicate)`);
-                    continue;
+                    logInfo(`[Scraper] Skipped msg ${msg.id} (Gemini: not an event)`);
+                    return true;
                 }
 
-                // Gate 4: Near-duplicate SimHash
-                if (await isNearDuplicate(simhash)) {
-                    skippedNearDupe++;
-                    // BUG-3 fix: pass null for simhash so near-dupes don't pollute SimHash slots
+                if (!result.title || result.title.trim().length === 0 || result.title === 'Event Announcement') {
                     await markAsSeen(msg.id, channelId, contentHash, null);
-                    logInfo(`[Scraper] Skipped msg ${msg.id} (near duplicate)`);
-                    continue;
+                    logWarn(`[Scraper] Skipped msg ${msg.id} (missing/generic title)`);
+                    return true;
                 }
 
-                // Gate 4.5: Pre-Gemini Heuristic Fast-Skip (FEAT-7a)
-                if (!hasEventSignals(msg.message)) {
-                    skippedHeuristic++;
+                // Gate 5: Past event guard
+                if (isEventPast(result)) {
+                    skippedPast++;
                     await markAsSeen(msg.id, channelId, contentHash, null);
-                    logInfo(`[Scraper] Skipped msg ${msg.id} (fails heuristic pre-filter)`);
-                    continue;
+                    logInfo(`[Scraper] Skipped msg ${msg.id} (event passed)`);
+                    return true;
                 }
-            }
 
-            // Global Gemini rate limit check across channels (FLAW-2 fix)
-            const now = Date.now();
-            if (context.lastGeminiCall > 0 && (now - context.lastGeminiCall) < 4200) {
-                await sleep(4200 - (now - context.lastGeminiCall));
-            }
-            context.lastGeminiCall = Date.now();
-            sentToGemini++;
-
-            const langTag = detectMalay(msg.message) ? '[lang=Malay]' : '[lang=EN]';
-            logInfo(`[DEBUG] ${channelId} msg ${msg.id}: SENT TO GEMINI ${langTag}`);
-
-            const result = await analyseWithGemini(msg.message, scraperModel);
-
-            if (result._error) {
-                if (result._circuitOpen) {
-                    logWarn(`[Scraper] Circuit breaker OPEN — pausing ${channelId} until next cycle`);
-                    break; // All further calls will also fail; wait for cooldown
+                // Gate 6: Title-level dedup
+                const titleHash = normaliseTitleHash(result.title);
+                if (await isTitleDuplicate(titleHash)) {
+                    skippedTitleDupe++;
+                    await markAsSeen(msg.id, channelId, contentHash, null);
+                    logInfo(`[Scraper] Skipped msg ${msg.id} (title duplicate)`);
+                    return true;
                 }
-                logWarn(`[Scraper] Gemini failed for ${channelId} msg ${msg.id}, will retry next cycle`);
-                continue;
+
+                // Gate 7: Post-Gemini Semantic Event Dedup (FEAT-7c)
+                const semCheck = await checkSemanticDuplicate(result.exactText || msg.message);
+                if (semCheck.isDupe) {
+                    skippedSemanticDupe++;
+                    await markAsSeen(msg.id, channelId, contentHash, null);
+                    logInfo(`[Scraper] Skipped msg ${msg.id} (semantic match: "${semCheck.matchTitle}")`);
+                    return true;
+                }
+
+                // Confirmed event! Mark seen with full simhash and post to Discord
+                await markAsSeen(msg.id, channelId, contentHash, simhash);
+                logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says EVENT (${result.type}) ${langTag} title="${result.title}"`);
+                eventsFound++;
+                await postToDiscord(discordChannel, result, channelName || channelId, msg.message, titleHash, semCheck.embedding);
+                logInfo(`[Scraper] Posted: ${result.title} [${result.type}]`);
+                return true;
+            })();
+
+            if (success === 'break') {
+                hasErrorInRun = true;
+                break;
+            }
+            if (success === false) {
+                hasErrorInRun = true;
             }
 
-            if (!result.isEvent) {
-                await markAsSeen(msg.id, channelId, contentHash, null);
-                logInfo(`[Scraper] Skipped msg ${msg.id} (Gemini: not an event)`);
-                continue;
+            if (success && !hasErrorInRun) {
+                await setChannelCursor(channelId, msg.id);
             }
-
-            if (!result.title || result.title.trim().length === 0 || result.title === 'Event Announcement') {
-                await markAsSeen(msg.id, channelId, contentHash, null);
-                logWarn(`[Scraper] Skipped msg ${msg.id} (missing/generic title)`);
-                continue;
-            }
-
-            // Gate 5: Past event guard
-            if (isEventPast(result)) {
-                skippedPast++;
-                await markAsSeen(msg.id, channelId, contentHash, null);
-                logInfo(`[Scraper] Skipped msg ${msg.id} (event passed)`);
-                continue;
-            }
-
-            // Gate 6: Title-level dedup
-            const titleHash = normaliseTitleHash(result.title);
-            if (await isTitleDuplicate(titleHash)) {
-                skippedTitleDupe++;
-                await markAsSeen(msg.id, channelId, contentHash, null);
-                logInfo(`[Scraper] Skipped msg ${msg.id} (title duplicate)`);
-                continue;
-            }
-
-            // Gate 7: Post-Gemini Semantic Event Dedup (FEAT-7c)
-            const semCheck = await checkSemanticDuplicate(result.exactText || msg.message);
-            if (semCheck.isDupe) {
-                skippedSemanticDupe++;
-                await markAsSeen(msg.id, channelId, contentHash, null);
-                logInfo(`[Scraper] Skipped msg ${msg.id} (semantic match: "${semCheck.matchTitle}")`);
-                continue;
-            }
-
-            // Confirmed event! Mark seen with full simhash and post to Discord
-            await markAsSeen(msg.id, channelId, contentHash, simhash);
-            logInfo(`[DEBUG] ${channelId} msg ${msg.id}: GEMINI says EVENT (${result.type}) ${langTag} title="${result.title}"`);
-            eventsFound++;
-            await postToDiscord(discordChannel, result, channelName || channelId, msg.message, titleHash, semCheck.embedding);
-            logInfo(`[Scraper] Posted: ${result.title} [${result.type}]`);
         }
 
         logInfo(
