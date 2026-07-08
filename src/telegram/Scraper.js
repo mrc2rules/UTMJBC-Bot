@@ -215,6 +215,12 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
                     return false;
                 }
 
+                if (result._blocked) {
+                    await markAsSeen(msg.id, channelId, contentHash, null);
+                    logWarn(`[Scraper] Skipped msg ${msg.id} (Gemini blocked: ${result.finishReason})`);
+                    return true;
+                }
+
                 if (!result.isEvent) {
                     await markAsSeen(msg.id, channelId, contentHash, null);
                     logInfo(`[Scraper] Skipped msg ${msg.id} (Gemini: not an event)`);

@@ -1,7 +1,7 @@
-const { detectMalay } = require('./MessageChecker');
-const { logError }    = require('./logger');
-const aiGateway       = require('../services/AIGateway');
-const eventExtractorPrompt = require('../prompts/eventExtractorPrompt');
+const { detectMalay }       = require('./MessageChecker');
+const { logError, logWarn } = require('./logger');
+const aiGateway             = require('../services/AIGateway');
+const eventExtractorPrompt  = require('../prompts/eventExtractorPrompt');
 
 // ─── Gemini Event Analyser ────────────────────────────────────────────────────
 //
@@ -125,7 +125,7 @@ async function analyseWithGemini(text, modelName = 'gemini-2.5-flash') {
             model: modelName || 'gemini-2.5-flash',
             systemInstruction,
             temperature: 0.1,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 8192,
             responseMimeType: 'application/json',
             responseSchema: schema,
             safetySettings: [
@@ -213,12 +213,21 @@ async function analyseWithGemini(text, modelName = 'gemini-2.5-flash') {
         });
 
         const raw = response.text || '{"isEvent":false}';
+        const finishReason = response?.candidates?.[0]?.finishReason;
+        const isBlocked = finishReason && ['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'LANGUAGE'].includes(finishReason);
+
+        if (isBlocked) {
+            logWarn(`[GeminiAnalyser] Generation blocked/stopped by Gemini filter | finishReason: ${finishReason}`);
+            return { isEvent: false, _blocked: true, finishReason };
+        }
+
         let parsed;
         try {
             const cleaned = sanitizeJsonString(raw);
             parsed = JSON.parse(cleaned);
         } catch (parseErr) {
-            logError(`[GeminiAnalyser] JSON parse error: ${parseErr.message} | Raw text: ${raw}`);
+            const finishInfo = finishReason ? ` | finishReason: ${finishReason}` : '';
+            logError(`[GeminiAnalyser] JSON parse error: ${parseErr.message}${finishInfo} | Raw text: ${raw}`);
             return { isEvent: false, _error: true };
         }
         parsed._isMalay = isMalay;
