@@ -1,6 +1,7 @@
 const fs   = require('fs');
 const path = require('path');
-const config = require('../../config/config.json');
+let config = {};
+try { config = require('../../config/config.json'); } catch {}
 const state  = require('./state');
 
 // ─── Live Log Buffer ──────────────────────────────────────────────────────────
@@ -10,16 +11,27 @@ const state  = require('./state');
 let liveLogBuffer  = '';
 let liveLogTimeout = null;
 
-function flushLiveLogs() {
+async function flushLiveLogs() {
     if (!liveLogBuffer || !state.discordClient) return;
     const msg      = liveLogBuffer;
     liveLogBuffer  = '';
     liveLogTimeout = null;
 
     const targetLogChannelId = config.discordLiveLogId || '1519284305464004678';
-    const logChannel = state.discordClient.channels.cache.get(targetLogChannelId);
+    let logChannel = state.discordClient.channels.cache.get(targetLogChannelId);
+    if (!logChannel) {
+        logChannel = await state.discordClient.channels.fetch(targetLogChannelId).catch(() => null);
+    }
     if (logChannel) {
-        logChannel.send(`\`\`\`ansi\n${msg.substring(0, 1990)}\n\`\`\``).catch(() => {});
+        const chunks = [];
+        for (let i = 0; i < msg.length; i += 1980) {
+            chunks.push(msg.substring(i, i + 1980));
+        }
+        for (const chunk of chunks) {
+            await logChannel.send(`\`\`\`ansi\n${chunk}\n\`\`\``).catch(err => {
+                console.error('[logger] Failed to send live log to Discord:', err.message);
+            });
+        }
     }
 }
 

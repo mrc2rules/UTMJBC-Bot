@@ -228,7 +228,7 @@ async function analyseWithGemini(text, modelName = 'gemini-2.5-flash') {
         } catch (parseErr) {
             const finishInfo = finishReason ? ` | finishReason: ${finishReason}` : '';
             logError(`[GeminiAnalyser] JSON parse error: ${parseErr.message}${finishInfo} | Raw text: ${raw}`);
-            return { isEvent: false, _error: true };
+            return { isEvent: false, _error: true, errorReason: `JSON parse error: ${parseErr.message}${finishInfo}` };
         }
         parsed._isMalay = isMalay;
 
@@ -244,7 +244,7 @@ async function analyseWithGemini(text, modelName = 'gemini-2.5-flash') {
         if (!isCircuitOpen) {
             logError(`[GeminiAnalyser] Gemini API error: ${e.message}`);
         }
-        return { isEvent: false, _error: true, _circuitOpen: isCircuitOpen };
+        return { isEvent: false, _error: true, _circuitOpen: isCircuitOpen, errorReason: e.message };
     }
 }
 

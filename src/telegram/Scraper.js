@@ -211,7 +211,8 @@ async function scrapeChannel(discordChannel, channelId, force = false, channelNa
                         logWarn(`[Scraper] Circuit breaker OPEN — pausing ${channelId} until next cycle`);
                         return 'break';
                     }
-                    logWarn(`[Scraper] Gemini failed for ${channelId} msg ${msg.id}, will retry next cycle`);
+                    const reasonStr = result.errorReason ? ` (${result.errorReason})` : '';
+                    logWarn(`[Scraper] Gemini failed for ${channelId} msg ${msg.id}${reasonStr}, will retry next cycle`);
                     return false;
                 }
 
