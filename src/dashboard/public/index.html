@@ -34,13 +34,14 @@
         ::-webkit-scrollbar-track { background: #0f1117; }
         ::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #3b435a; }
-        .glass-card { background: rgba(26,30,41,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(42,48,64,0.8); }
+        .glass-card { background: rgba(26,30,41,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(42,48,64,0.8); transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s, box-shadow 0.25s; }
+        .glass-card:hover { transform: translateY(-2px); border-color: rgba(255,77,109,0.3); box-shadow: 0 12px 24px -10px rgba(255,77,109,0.15); }
         .tag-pill { display:inline-flex; align-items:center; gap:6px; background:#2a3040; border:1px solid #3b435a; padding:4px 10px; border-radius:9999px; font-size:0.825rem; color:#e5e7eb; transition:all 0.2s; }
         .tag-pill:hover { border-color:#ff4d6d; }
         .spinner { border:3px solid rgba(255,255,255,0.1); border-left-color:#ff4d6d; border-radius:50%; width:24px; height:24px; animation:spin 0.8s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .shimmer { background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.03) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        .shimmer { background: linear-gradient(90deg, rgba(255,255,255,0.01) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.01) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; }
 
         /* Sidebar nav */
         .nav-item { display:flex; align-items:center; gap:10px; padding:7px 12px; border-radius:10px; cursor:pointer; font-size:0.875rem; font-weight:500; color:#9ca3af; transition:all 0.15s; width:100%; text-align:left; border:none; background:none; }
@@ -57,32 +58,43 @@
         .server-option:hover { background:rgba(255,255,255,0.05); }
         .server-option.active-guild { background:rgba(255,77,109,0.1); }
 
-        /* Tab panels */
+        /* Tab panels with smooth fade-in */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .tab-panel { display:none; flex-direction:column; gap:20px; }
-        .tab-panel.active { display:flex; }
+        .tab-panel.active { display:flex; animation: fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
-        /* Field helpers */
+        /* Field helpers with focus ring glows */
         .field-label { font-size:0.75rem; font-weight:600; color:#9ca3af; display:block; margin-bottom:4px; }
-        .field-input { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:10px 16px; font-size:0.875rem; color:#fff; outline:none; transition:border-color 0.15s; }
-        .field-input:focus { border-color:#ff4d6d; }
-        .field-textarea { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:12px 16px; font-size:0.875rem; color:#fff; outline:none; resize:vertical; transition:border-color 0.15s; }
-        .field-textarea:focus { border-color:#ff4d6d; }
-        .field-select { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:10px 16px; font-size:0.875rem; color:#fff; outline:none; transition:border-color 0.15s; }
-        .field-select:focus { border-color:#ff4d6d; }
+        .field-input { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:10px 16px; font-size:0.875rem; color:#fff; outline:none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .field-input:focus { border-color:#ff4d6d; box-shadow: 0 0 0 3px rgba(255, 77, 109, 0.15); }
+        .field-textarea { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:12px 16px; font-size:0.875rem; color:#fff; outline:none; resize:vertical; transition: border-color 0.2s, box-shadow 0.2s; }
+        .field-textarea:focus { border-color:#ff4d6d; box-shadow: 0 0 0 3px rgba(255, 77, 109, 0.15); }
+        .field-select { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:10px 16px; font-size:0.875rem; color:#fff; outline:none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .field-select:focus { border-color:#ff4d6d; box-shadow: 0 0 0 3px rgba(255, 77, 109, 0.15); }
 
-        /* Button variants */
-        .btn-primary { background:#ff4d6d; color:#fff; font-weight:600; padding:10px 20px; border-radius:12px; font-size:0.875rem; transition:all 0.15s; border:none; cursor:pointer; }
+        /* Button variants with click scale animation */
+        .btn-primary { background:#ff4d6d; color:#fff; font-weight:600; padding:10px 20px; border-radius:12px; font-size:0.875rem; border:none; cursor:pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .btn-primary:hover { background:#e63956; }
-        .btn-secondary { background:#2a3040; color:#fff; font-weight:500; padding:10px 20px; border-radius:12px; font-size:0.875rem; transition:all 0.15s; border:none; cursor:pointer; }
+        .btn-primary:active { transform: scale(0.96); }
+        .btn-secondary { background:#2a3040; color:#fff; font-weight:500; padding:10px 20px; border-radius:12px; font-size:0.875rem; border:none; cursor:pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .btn-secondary:hover { background:#3b435a; }
-        .btn-danger { background:rgba(239,68,68,0.15); color:#f87171; font-weight:500; padding:10px 20px; border-radius:12px; font-size:0.875rem; transition:all 0.15s; border:1px solid rgba(239,68,68,0.3); cursor:pointer; }
+        .btn-secondary:active { transform: scale(0.96); }
+        .btn-danger { background:rgba(239,68,68,0.15); color:#f87171; font-weight:500; padding:10px 20px; border-radius:12px; font-size:0.875rem; border:1px solid rgba(239,68,68,0.3); cursor:pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .btn-danger:hover { background:rgba(239,68,68,0.8); color:#fff; border-color:transparent; }
+        .btn-danger:active { transform: scale(0.96); }
 
         .section-title { font-size:1.1rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:10px; }
         .section-desc { font-size:0.8rem; color:#6b7280; margin-top:2px; }
         .card-title { font-size:0.9rem; font-weight:600; color:#fff; margin-bottom:4px; }
         .card-desc { font-size:0.75rem; color:#6b7280; margin-bottom:14px; line-height:1.6; }
         .sub-divider { border-top:1px solid #2a3040; padding-top:18px; margin-top:2px; }
+
+        /* Toast Progress Bar */
+        @keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
+        .toast-progress { height: 2.5px; position: absolute; bottom: 0; left: 0; width: 100%; animation: toastProgress 3.8s linear forwards; }
+        .toast-progress.success { background: #ff4d6d; }
+        .toast-progress.error { background: #ef4444; }
+        .toast-progress.info { background: #3b82f6; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-octavia-500 selection:text-white">
@@ -756,8 +768,10 @@ async function saveSettings() {
         const res = await fetch(`/api/guilds/${currentGuildId}/settings`, {
             method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
         });
-        res.ok ? showToast('Settings saved!') : alert('Failed to save settings.');
-    } catch { alert('Network error.'); }
+        res.ok ? showToast('Settings saved!') : showToast('Failed to save settings.', 'error');
+    } catch {
+        showToast('Network error.', 'error');
+    }
     btn.disabled = false; btn.innerHTML = orig;
 }
 
@@ -823,7 +837,7 @@ function renderDomainRoles() {
 function addDomainRoleMapping() {
     const dom = document.getElementById('domainRole-input').value.trim().toLowerCase();
     const role = document.getElementById('domainRole-role-select').value;
-    if (!dom||!role) { alert('Enter a domain and select a role.'); return; }
+    if (!dom||!role) { showToast('Enter a domain and select a role.', 'error'); return; }
     if (!currentSettings.domainRoles) currentSettings.domainRoles={};
     if (!Array.isArray(currentSettings.domainRoles[dom])) currentSettings.domainRoles[dom]=[];
     if (!currentSettings.domainRoles[dom].includes(role)) currentSettings.domainRoles[dom].push(role);
@@ -869,7 +883,7 @@ document.getElementById('tgblacklist-input')?.addEventListener('keydown',e=>{ if
 // ── POST VERIFICATION BUTTON ──
 async function sendVerificationButton() {
     const channelId = document.getElementById('setting-channelID').value;
-    if (!channelId) { alert('Select a Verification Channel first.'); return; }
+    if (!channelId) { showToast('Select a Verification Channel first.', 'error'); return; }
     const res = await fetch(`/api/guilds/${currentGuildId}/button`, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
@@ -884,7 +898,7 @@ async function sendVerificationButton() {
     if (res.ok && data.success) {
         if (data.messageId) document.getElementById('setting-messageID').value = data.messageId;
         showToast('Verification button posted!');
-    } else { alert(`Failed: ${data.error||'Unknown error'}`); }
+    } else { showToast(`Failed: ${data.error||'Unknown error'}`, 'error'); }
 }
 
 // ── SCRAPER TRIGGER ──
@@ -894,8 +908,8 @@ async function triggerTelegramScraper() {
     try {
         const res = await fetch('/api/telegram/scrape', {method:'POST'});
         const data = await res.json();
-        res.ok ? showToast(data.message) : alert(`Failed: ${data.error||'Unknown'}`);
-    } catch { alert('Error triggering scraper.'); }
+        res.ok ? showToast(data.message) : showToast(`Failed: ${data.error||'Unknown'}`, 'error');
+    } catch { showToast('Error triggering scraper.', 'error'); }
     btn.disabled=false; btn.innerHTML=orig;
 }
 
@@ -903,7 +917,7 @@ async function triggerTelegramScraper() {
 async function manualVerifyUser() {
     const userId = document.getElementById('manual-user-id').value.trim();
     const email = document.getElementById('manual-email').value.trim();
-    if (!userId||!email) { alert('Provide both a Discord User ID and Email.'); return; }
+    if (!userId||!email) { showToast('Provide both a Discord User ID and Email.', 'error'); return; }
     const res = await fetch(`/api/guilds/${currentGuildId}/manualverify`, {
         method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({userId,email})
     });
@@ -912,7 +926,7 @@ async function manualVerifyUser() {
         showToast(data.message);
         document.getElementById('manual-user-id').value='';
         document.getElementById('manual-email').value='';
-    } else { alert(`Failed: ${data.error||'Unknown'}`); }
+    } else { showToast(`Failed: ${data.error||'Unknown'}`, 'error'); }
 }
 
 // ── USER LOOKUP ──
@@ -925,7 +939,7 @@ async function lookupUser() {
     if (res.ok && data) {
         document.getElementById('lookup-result-content').innerHTML = `<strong>Status:</strong> Verified<br><strong>Email Hash:</strong> ${data.email||'N/A'}`;
         document.getElementById('lookup-result').classList.remove('hidden');
-    } else { alert(data.error||'User not found in verified database.'); }
+    } else { showToast(data.error||'User not found in verified database.', 'error'); }
 }
 async function deleteUserData() {
     const userId = document.getElementById('lookup-user-id').value.trim();
@@ -936,7 +950,7 @@ async function deleteUserData() {
         showToast(data.message);
         document.getElementById('lookup-result').classList.add('hidden');
         document.getElementById('lookup-user-id').value='';
-    } else { alert('Failed to delete user data.'); }
+    } else { showToast('Failed to delete user data.', 'error'); }
 }
 
 // ── EXPORT CSV & JSON ──
@@ -958,7 +972,7 @@ async function generateInviteLink() {
         const a = document.getElementById('invite-link-url');
         a.href = url; a.textContent = url;
         document.getElementById('invite-link-result').classList.remove('hidden');
-    } else { alert('Client ID not configured.'); }
+    } else { showToast('Client ID not configured.', 'error'); }
 }
 
 // ── BOT STATUS & KPI CHART ──
@@ -1083,10 +1097,24 @@ function showToast(msg, type = 'success') {
         t.className = 'fixed bottom-6 right-6 z-50 transform translate-y-0 opacity-100 scale-100 transition-all duration-300 pointer-events-auto bg-octavia-card/95 backdrop-blur-xl border border-octavia-500/40 px-5 py-3.5 rounded-2xl shadow-[0_10px_35px_rgba(157,78,221,0.3)] flex items-center gap-3 text-white text-sm font-medium overflow-hidden';
     }
     
+    // Remove existing progress bar if any
+    const existingBar = t.querySelector('.toast-progress');
+    if (existingBar) existingBar.remove();
+    
+    // Add dynamic timer bar
+    const bar = document.createElement('div');
+    bar.className = `toast-progress ${type}`;
+    t.appendChild(bar);
+    
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
         t.classList.remove('translate-y-0','opacity-100','scale-100','pointer-events-auto');
         t.classList.add('translate-y-20','opacity-0','scale-95','pointer-events-none');
+        // Clean up the progress bar after fade-out
+        setTimeout(() => {
+            const b = t.querySelector('.toast-progress');
+            if (b) b.remove();
+        }, 300);
     }, 3800);
 }
 
