@@ -14,11 +14,10 @@ const state = require('../shared/state');
 class DashboardServer {
     constructor() {
         this.app = express();
-        // AlwaysData (when running as Node.js site) injects ALWAYSDATA_HTTPD_PORT.
-        // If ALWAYSDATA_HTTPD_PORT is present, use it. Otherwise use DASHBOARD_PORT (or 8182).
-        // Do not use process.env.PORT here because ServerStatsAPI uses process.env.PORT (8181).
-        this.alwaysDataPort = process.env.ALWAYSDATA_HTTPD_PORT ? parseInt(process.env.ALWAYSDATA_HTTPD_PORT, 10) : null;
-        this.port = this.alwaysDataPort || process.env.DASHBOARD_PORT || 8182;
+        // AlwaysData (when running as Node.js or User program site) injects PORT and ALWAYSDATA_HTTPD_PORT.
+        // We prioritize ALWAYSDATA_HTTPD_PORT or PORT so the web proxy routes directly to our dashboard.
+        this.envPort = process.env.ALWAYSDATA_HTTPD_PORT || process.env.PORT;
+        this.port = this.envPort ? parseInt(this.envPort, 10) : (process.env.DASHBOARD_PORT || 8182);
         this.bot = null;
         this.started = false;
         this.sessions = new Map(); // sessionId -> { user, guilds, expiresAt }
@@ -49,7 +48,7 @@ class DashboardServer {
                 if (!clientSecret) clientSecret = cfg.clientSecret || cfg.CLIENT_SECRET || cfg.DISCORD_CLIENT_SECRET || cfg.discordClientSecret;
                 if (!redirectUri) redirectUri = cfg.dashboardRedirectUri || cfg.DASHBOARD_REDIRECT_URI || cfg.redirectUri;
                 if (!baseUrl && cfg.dashboardUrl) baseUrl = cfg.dashboardUrl;
-                if (cfg.dashboardPort && !this.alwaysDataPort) this.port = cfg.dashboardPort;
+                if (cfg.dashboardPort && !this.envPort) this.port = cfg.dashboardPort;
             }
         } catch (err) {
             logWarn(`[DashboardServer] Error reading config.json: ${err.message}`);
