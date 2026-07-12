@@ -14,7 +14,11 @@ const state = require('../shared/state');
 class DashboardServer {
     constructor() {
         this.app = express();
-        this.port = process.env.DASHBOARD_PORT || 8182;
+        // AlwaysData (when running as Node.js site) injects ALWAYSDATA_HTTPD_PORT.
+        // If ALWAYSDATA_HTTPD_PORT is present, use it. Otherwise use DASHBOARD_PORT (or 8182).
+        // Do not use process.env.PORT here because ServerStatsAPI uses process.env.PORT (8181).
+        this.alwaysDataPort = process.env.ALWAYSDATA_HTTPD_PORT ? parseInt(process.env.ALWAYSDATA_HTTPD_PORT, 10) : null;
+        this.port = this.alwaysDataPort || process.env.DASHBOARD_PORT || 8182;
         this.bot = null;
         this.started = false;
         this.sessions = new Map(); // sessionId -> { user, guilds, expiresAt }
@@ -45,7 +49,7 @@ class DashboardServer {
                 if (!clientSecret) clientSecret = cfg.clientSecret || cfg.CLIENT_SECRET || cfg.DISCORD_CLIENT_SECRET || cfg.discordClientSecret;
                 if (!redirectUri) redirectUri = cfg.dashboardRedirectUri || cfg.DASHBOARD_REDIRECT_URI || cfg.redirectUri;
                 if (!baseUrl && cfg.dashboardUrl) baseUrl = cfg.dashboardUrl;
-                if (cfg.dashboardPort) this.port = cfg.dashboardPort;
+                if (cfg.dashboardPort && !this.alwaysDataPort) this.port = cfg.dashboardPort;
             }
         } catch (err) {
             logWarn(`[DashboardServer] Error reading config.json: ${err.message}`);
@@ -686,8 +690,9 @@ CLIENT_SECRET=your_client_secret_here (or DISCORD_CLIENT_SECRET)</pre>
         this.started = true;
         this.registerRoutes();
 
-        this.app.listen(this.port, () => {
-            logInfo(`[DashboardServer] Octavia Web Dashboard listening on port ${this.port}!`);
+        // Bind explicitly to '0.0.0.0' so connections to 127.0.0.1, localhost, or any interface work seamlessly.
+        this.app.listen(this.port, '0.0.0.0', () => {
+            logInfo(`[DashboardServer] Octavia Web Dashboard listening on 0.0.0.0:${this.port}!`);
         });
     }
 }
