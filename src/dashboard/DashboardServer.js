@@ -689,9 +689,10 @@ CLIENT_SECRET=your_client_secret_here (or DISCORD_CLIENT_SECRET)</pre>
         this.started = true;
         this.registerRoutes();
 
-        // Bind explicitly to '0.0.0.0' so connections to 127.0.0.1, localhost, or any interface work seamlessly.
-        this.app.listen(this.port, '0.0.0.0', () => {
-            logInfo(`[DashboardServer] Octavia Web Dashboard listening on 0.0.0.0:${this.port}!`);
+        const bindIp = process.env.ALWAYSDATA_HTTPD_IP;
+        const listenArgs = bindIp ? [this.port, bindIp] : [this.port];
+        this.app.listen(...listenArgs, () => {
+            logInfo(`[DashboardServer] Octavia Web Dashboard listening on ${bindIp || 'all interfaces (:: / 0.0.0.0)'}:${this.port}!`);
         });
     }
 }
