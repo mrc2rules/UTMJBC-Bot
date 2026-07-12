@@ -618,6 +618,27 @@ CLIENT_SECRET=your_client_secret_here (or DISCORD_CLIENT_SECRET)</pre>
             );
         });
 
+        // Export verified members as JSON download
+        this.app.get('/api/guilds/:id/export/json', requireGuildAdmin, (req, res) => {
+            const guildId = req.params.id;
+            database.db.all(
+                'SELECT userID, email, groupID, isPublic FROM userEmails WHERE guildID = ?',
+                [guildId],
+                (err, rows) => {
+                    if (err) return res.status(500).json({ error: 'Database error during export' });
+                    const formatted = (rows || []).map(r => ({
+                        discordUserId: r.userID,
+                        emailHash: r.email,
+                        groupID: r.groupID || '',
+                        isPublic: r.isPublic || 0
+                    }));
+                    res.setHeader('Content-Type', 'application/json');
+                    res.setHeader('Content-Disposition', `attachment; filename="verified-members-${guildId}.json"`);
+                    res.send(JSON.stringify(formatted, null, 2));
+                }
+            );
+        });
+
         // /tgblacklist parity: Get Telegram keyword blacklist
         this.app.get('/api/telegram/blacklist', requireAuth, async (req, res) => {
             try {
