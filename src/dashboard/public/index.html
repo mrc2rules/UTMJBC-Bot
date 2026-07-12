@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Unbounded:wght@700&family=Dela+Gothic+One&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -22,7 +22,12 @@
                             dark: '#0f1117', card: '#1a1e29', border: '#2a3040'
                         }
                     },
-                    fontFamily: { outfit: ['Outfit','sans-serif'], inter: ['Inter','sans-serif'] }
+                    fontFamily: { 
+                        outfit: ['Outfit','sans-serif'], 
+                        inter: ['Inter','sans-serif'],
+                        unbounded: ['Unbounded', 'sans-serif'],
+                        dela: ['"Dela Gothic One"', 'cursive']
+                    }
                 }
             }
         }
@@ -83,7 +88,7 @@
         .btn-danger:hover { background:rgba(239,68,68,0.8); color:#fff; border-color:transparent; }
         .btn-danger:active { transform: scale(0.96); }
 
-        .section-title { font-size:1.1rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:10px; }
+        .section-title { font-family: 'Unbounded', sans-serif; font-size:1.05rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:10px; }
         .section-desc { font-size:0.8rem; color:#6b7280; margin-top:2px; }
         .card-title { font-size:0.9rem; font-weight:600; color:#fff; margin-bottom:4px; }
         .card-desc { font-size:0.75rem; color:#6b7280; margin-bottom:14px; line-height:1.6; }
@@ -103,7 +108,7 @@
 <header class="sticky top-0 z-50 bg-[#0e111a] border-b border-octavia-border px-5 py-3 flex items-center gap-4">
     <div class="flex items-center gap-3 shrink-0">
         <img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png" alt="Octavia" class="w-8 h-8 rounded-full object-cover">
-        <span class="text-base font-bold text-white font-heading">Octavia</span>
+        <span class="text-base text-white font-dela select-none tracking-wider">Octavia</span>
     </div>
 
     <div class="flex-1 flex justify-center">
