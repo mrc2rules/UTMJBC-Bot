@@ -39,8 +39,14 @@
         ::-webkit-scrollbar-track { background: #0f1117; }
         ::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #3b435a; }
-        .glass-card { background: rgba(26,30,41,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(42,48,64,0.8); transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s, box-shadow 0.25s; }
-        .glass-card:hover { transform: translateY(-2px); border-color: rgba(255,77,109,0.3); box-shadow: 0 12px 24px -10px rgba(255,77,109,0.15); }
+        .glass-card { background: rgba(26,30,41,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(42,48,64,0.8); }
+        #mobile-sidebar-overlay { display: none; position: fixed; inset: 0; top: 57px; z-index: 35; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
+        @media (max-width: 767px) {
+            #sidebar { position: fixed !important; top: 57px; bottom: 0; left: 0; z-index: 40; width: 260px; transform: translateX(-100%); transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex !important; background: #0c0f18; box-shadow: 15px 0 30px rgba(0, 0, 0, 0.7); }
+            #sidebar.open { transform: translateX(0); }
+            #content-area { padding: 1.25rem !important; }
+            .glass-card { padding: 1.25rem !important; }
+        }
         .tag-pill { display:inline-flex; align-items:center; gap:6px; background:#2a3040; border:1px solid #3b435a; padding:4px 10px; border-radius:9999px; font-size:0.825rem; color:#e5e7eb; transition:all 0.2s; }
         .tag-pill:hover { border-color:#ff4d6d; }
         .spinner { border:3px solid rgba(255,255,255,0.1); border-left-color:#ff4d6d; border-radius:50%; width:24px; height:24px; animation:spin 0.8s linear infinite; }
@@ -105,20 +111,25 @@
 <body class="min-h-screen flex flex-col selection:bg-octavia-500 selection:text-white">
 
 <!-- ══════════ NAVBAR ══════════ -->
-<header class="sticky top-0 z-50 bg-[#0e111a] border-b border-octavia-border px-5 py-3 flex items-center gap-4">
-    <div class="flex items-center gap-3 shrink-0">
-        <img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png" alt="Octavia" class="w-8 h-8 rounded-full object-cover">
-        <span class="text-base text-white font-dela select-none tracking-wider">Octavia</span>
+<header class="sticky top-0 z-50 bg-[#0e111a] border-b border-octavia-border px-4 py-3 flex items-center gap-2 sm:gap-4">
+    <!-- Hamburger Menu Toggle (Mobile Only) -->
+    <button id="mobile-menu-toggle" onclick="toggleMobileSidebar()" class="md:hidden flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all select-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+
+    <div class="flex items-center gap-2 shrink-0">
+        <img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png" alt="Octavia" class="w-7 h-7 rounded-full object-cover">
+        <span class="text-sm text-white font-dela select-none tracking-wider hidden sm:inline-block">Octavia</span>
     </div>
 
-    <div class="flex-1 flex justify-center">
-        <div id="server-picker-wrap" class="relative hidden">
-            <button id="server-picker-btn" onclick="toggleServerDropdown()" class="flex items-center gap-2.5 bg-octavia-dark border border-octavia-border hover:border-octavia-500/40 px-3 py-2 rounded-xl transition-all min-w-[220px] max-w-xs">
-                <img id="picker-guild-icon" src="" class="w-6 h-6 rounded-lg object-cover bg-octavia-border shrink-0" alt="">
-                <span id="picker-guild-name" class="text-sm font-semibold text-white truncate flex-1 text-left">Select Server</span>
-                <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    <div class="flex-1 flex justify-center px-1 sm:px-2">
+        <div id="server-picker-wrap" class="relative hidden w-full max-w-[220px]">
+            <button id="server-picker-btn" onclick="toggleServerDropdown()" class="w-full flex items-center gap-1.5 bg-octavia-dark border border-octavia-border hover:border-octavia-500/40 px-2 py-1.5 rounded-xl transition-all">
+                <img id="picker-guild-icon" src="" class="w-5 h-5 rounded-lg object-cover bg-octavia-border shrink-0" alt="">
+                <span id="picker-guild-name" class="text-xs sm:text-sm font-semibold text-white truncate flex-1 text-left">Select Server</span>
+                <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
-            <div id="server-dropdown-panel">
+            <div id="server-dropdown-panel" class="w-full">
                 <div id="server-dropdown-list" class="p-2"></div>
             </div>
         </div>
@@ -130,7 +141,9 @@
 </header>
 
 <!-- ══════════ MAIN LAYOUT ══════════ -->
-<main class="flex-1 flex overflow-hidden" style="height:calc(100vh - 57px)">
+<main class="flex-1 flex overflow-hidden relative" style="height:calc(100vh - 57px)">
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="mobile-sidebar-overlay" onclick="toggleMobileSidebar()"></div>
 
     <!-- SIDEBAR -->
     <aside id="sidebar" class="hidden w-60 shrink-0 border-r border-octavia-border bg-[#0c0f18] flex-col overflow-y-auto">
@@ -578,10 +591,10 @@ function showState(state) {
 // ── USER NAV ──
 function renderUserNav(user) {
     document.getElementById('nav-user-container').innerHTML = `
-        <div class="flex items-center gap-2 bg-octavia-dark/60 border border-octavia-border px-3 py-1.5 rounded-full">
-            <img src="${user.avatar}" class="w-6 h-6 rounded-full border border-white/20">
-            <span class="text-sm font-semibold text-white">${user.globalName}</span>
-            <a href="/auth/logout" class="text-xs text-gray-400 hover:text-red-400 ml-1 font-medium transition-colors">Logout</a>
+        <div class="flex items-center gap-1.5 sm:gap-2 bg-octavia-dark/60 border border-octavia-border px-2 sm:px-3 py-1 sm:py-1.5 rounded-full select-none">
+            <img src="${user.avatar}" class="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-white/20">
+            <span class="text-xs sm:text-sm font-semibold text-white hidden md:inline-block">${user.globalName}</span>
+            <a href="/auth/logout" class="text-[10px] sm:text-xs text-gray-400 hover:text-red-400 ml-0.5 sm:ml-1 font-medium transition-colors">Logout</a>
         </div>`;
 }
 
@@ -726,7 +739,16 @@ function populatePickers(meta) {
     });
 }
 
-// ── TAB SWITCHING ──
+// ── TAB SWITCHING & MOBILE MENU ──
+function toggleMobileSidebar() {
+    const sb = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobile-sidebar-overlay');
+    if (sb && overlay) {
+        sb.classList.toggle('open');
+        overlay.style.display = sb.classList.contains('open') ? 'block' : 'none';
+    }
+}
+
 function switchTab(name) {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -737,6 +759,11 @@ function switchTab(name) {
         startStatusInterval();
     } else {
         stopStatusInterval();
+    }
+    // Close sidebar on mobile select
+    const sb = document.getElementById('sidebar');
+    if (sb && sb.classList.contains('open')) {
+        toggleMobileSidebar();
     }
 }
 
