@@ -1,10 +1,10 @@
 ---
 title: Home
-description: UTMJBC Bot — Email verification and AI-powered Telegram event scraper for the UTM Johor Bahru Community Discord server.
-image: https://media.discordapp.net/attachments/1423008246691659898/1521352248779866193/image.png?ex=6a448531&is=6a4333b1&hm=75b044f51e709f66df528d721c97b6b507a935dec42681d7edbc42e34a96ed07&=&format=webp&quality=lossless&width=771&height=770
+description: Octavia — Email verification and AI-powered Telegram event scraper for the UTM Johor Bahru Community Discord server.
+image: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png
 ---
 
-# UTMJBC Bot
+# Octavia
 
 **Automated identity verification and AI-powered campus event syndication for the Universiti Teknologi Malaysia (UTM) Johor Bahru Community.**
 
@@ -37,7 +37,7 @@ image: https://media.discordapp.net/attachments/1423008246691659898/152135224877
 
 ## Core Capabilities
 
-UTMJBC Bot is a resilient architecture designed specifically for university Discord communities. It combines three robust subsystems under a single sharded process protected by a centralized **AIGateway Circuit Breaker**:
+Octavia is a resilient architecture designed specifically for university Discord communities. It combines three robust subsystems under a single sharded process protected by a centralized **AIGateway Circuit Breaker**:
 
 === ":material-email-check: Email Verification"
 
@@ -103,7 +103,7 @@ UTMJBC Bot is a resilient architecture designed specifically for university Disc
 ---
 
 !!! warning "Legal Disclaimer"
-    **UTM Johor Bahru Community (UTMJBC)** and the **UTMJBC Bot** are independent student-led initiatives. They are **not affiliated with, sponsored by, or officially endorsed by Universiti Teknologi Malaysia (UTM)**.
+    **UTM Johor Bahru Community (UTMJBC)** and **Octavia** are independent student-led initiatives. They are **not affiliated with, sponsored by, or officially endorsed by Universiti Teknologi Malaysia (UTM)**.
 
 <script>
 const ids = ['serverCount','verifiedToday','verifiedAll','emailsToday','emailsAll'];

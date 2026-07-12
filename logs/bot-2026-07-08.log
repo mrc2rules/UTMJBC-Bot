@@ -1,0 +1,1 @@
+[2026-07-08T03:46:41.086Z] [ERROR] [AIGateway] Error during generateContent (1/5): [AIGateway] GEMINI_API_KEY environment variable is missing.

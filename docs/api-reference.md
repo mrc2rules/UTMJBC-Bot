@@ -1,11 +1,11 @@
 ---
 title: API Reference Overview
-description: Overview of internal module APIs for UTMJBC Bot.
+description: Overview of internal module APIs for Octavia.
 ---
 
 # API Reference Overview
 
-Welcome to the UTMJBC Bot internal developer API reference. This reference is organized by logical subsystem:
+Welcome to the Octavia internal developer API reference. This reference is organized by logical subsystem:
 
 * **[AI Subsystem](api/ai.md)** — Resilient Gemini API integrations, AIGateway, grounding search, and response translation schemas.
 * **[Telegram Event Pipeline](api/telegram.md)** — MTProto listeners, message scraping loops, deduplication logic, and Discord forum publisher.

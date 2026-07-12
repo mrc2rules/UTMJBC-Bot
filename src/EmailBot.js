@@ -15,6 +15,7 @@ const fs = require("fs");
 const { getLocale, defaultLanguage } = require('./Language')
 require("./database/ServerSettings");
 const ServerStatsAPI = require("./api/ServerStatsAPI");
+const dashboardServer = require("./dashboard/DashboardServer");
 const MailSender = require("./mail/MailSender")
 const sendVerifyMessage = require("./bot/sendVerifyMessage")
 const { showEmailModal } = require("./bot/showEmailModal")
@@ -164,6 +165,7 @@ bot.once('clientReady', async () => {
         serverStatsAPI.app.listen(serverStatsAPI.port, () => {
             logInfo(`App listening on port ${serverStatsAPI.port}!`)
         })
+        dashboardServer.start(bot);
         startTelegram(bot);
         rl = readline.createInterface(stdin, stdout)
         rl.on("line", async command => {
@@ -190,11 +192,11 @@ bot.once('clientReady', async () => {
         })
     }
     await registerAllGuilds(bot);
-    bot.user.setActivity("/verify | Website", { type: "PLAYING", url: "https://emailbot.larskaesberg.de" });
+    bot.user.setActivity("/verify | Octavia", { type: 4, name: "/verify | Octavia Dashboard" });
 });
 
 setInterval(function () {
-    bot.user.setActivity("/verify | Website", { type: "PLAYING", url: "https://emailbot.larskaesberg.de" })
+    bot.user.setActivity("/verify | Octavia", { type: 4, name: "/verify | Octavia Dashboard" })
 }, 3600000);
 
 bot.on("guildDelete", guild => {

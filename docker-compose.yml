@@ -3,9 +3,10 @@ version: '3.8'
 services:
   app:
     build: .
-    image: ghcr.io/lkaesberg/emailverify:latest
+    image: ghcr.io/mrc2rules/utmjbc-bot:latest
     ports:
       - "8181:8181"
+      - "8182:8182"
     volumes:
       - app_config:/usr/app/config
       - app_data:/usr/app/data

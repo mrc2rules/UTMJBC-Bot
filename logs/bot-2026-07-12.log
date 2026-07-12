@@ -1,0 +1,32 @@
+[2026-07-12T02:02:56.998Z] [INFO ] [DashboardServer] User mrc2rules (541213514262511616) updated settings for guild 1407328981929431071
+[2026-07-12T04:43:00.020Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T04:43:02.522Z] [INFO ] App listening on port 8181!
+[2026-07-12T04:43:02.523Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-12T04:43:02.856Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-12T04:43:02.857Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-12T04:43:03.084Z] [ERROR] [TelegramListener] CRITICAL: Telegram error 406 AUTH_KEY_DUPLICATED. Another bot instance or process is currently running with the same telegramSession! Bot startup will continue without Telegram.
+[2026-07-12T04:51:57.962Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:27:13.445Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:27:18.269Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:27:22.796Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:27:34.328Z] [ERROR] Failed to login: ConnectTimeoutError: Connect Timeout Error (attempted address: discord.com:443, timeout: 10000ms)
+[2026-07-12T12:28:20.456Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:28:24.389Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:28:28.464Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:29:01.649Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:29:05.603Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:29:10.119Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:30:52.959Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:31:39.649Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T12:31:42.578Z] [INFO ] App listening on port 8181!
+[2026-07-12T12:31:42.579Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-12T12:31:42.938Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-12T12:31:42.956Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-12T12:31:43.250Z] [ERROR] [TelegramListener] CRITICAL: Telegram error 406 AUTH_KEY_DUPLICATED. Another bot instance or process is currently running with the same telegramSession! Bot startup will continue without Telegram.
+[2026-07-12T12:34:08.203Z] [INFO ] [DashboardServer] User mrc2rules (541213514262511616) updated settings for guild 1407328981929431071
+[2026-07-12T13:04:23.769Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-12T13:04:26.874Z] [INFO ] App listening on port 8181!
+[2026-07-12T13:04:26.875Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-12T13:04:27.349Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-12T13:04:27.350Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-12T13:04:27.551Z] [ERROR] [TelegramListener] CRITICAL: Telegram error 406 AUTH_KEY_DUPLICATED. Another bot instance or process is currently running with the same telegramSession! Bot startup will continue without Telegram.

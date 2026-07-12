@@ -1,11 +1,11 @@
 <!--
-  UTM Johor Bahru Community — UTMJBC Bot
+  UTM Johor Bahru Community — Octavia
 -->
 
 <br>
 <p align="center">
-  <a><img src="https://i.imgur.com/GmnbsON.png" alt="UTM JBC" width="300" title="UTM JBC"></a>
-  <h3 align="center">UTMJBC Bot</h3>
+  <a><img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png" alt="Octavia" width="200" title="Octavia"></a>
+  <h3 align="center">Octavia</h3>
   <p align="center">
     Email verification and AI-powered event feed for the UTM Johor Bahru Community Discord.
   </p>

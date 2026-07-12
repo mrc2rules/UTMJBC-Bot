@@ -132,6 +132,11 @@ class Database {
             this.db.run("ALTER TABLE guilds ADD chatbotModel TEXT DEFAULT 'gemini-2.5-flash'")
             this.db.run("ALTER TABLE guilds ADD scraperModel TEXT DEFAULT 'gemini-2.5-flash'")
         })
+        this.runMigration(13, () => {
+            this.db.run("ALTER TABLE guilds ADD otpExpiry INTEGER DEFAULT 10")
+            this.db.run("ALTER TABLE guilds ADD maxOtpAttempts INTEGER DEFAULT 3")
+            this.db.run("ALTER TABLE guilds ADD modPingRoleId TEXT DEFAULT ''")
+        })
     }
 
     runMigration(version, migration) {
@@ -162,8 +167,8 @@ class Database {
 
     updateServerSettings(guildID, serverSettings) {
         this.db.run(
-            "INSERT OR REPLACE INTO guilds (guildid, domains, blacklist, verifiedrole, unverifiedrole, channelid, messageid, language, autoVerify, autoAddUnverified, verifyMessage, logChannel, errorNotifyType, errorNotifyTarget, defaultRoles, domainRoles, eventForumId, spamReportChannelId, chatbotModel, scraperModel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [guildID, JSON.stringify(serverSettings.domains), JSON.stringify(serverSettings.blacklist), serverSettings.verifiedRoleName, serverSettings.unverifiedRoleName, serverSettings.channelID, serverSettings.messageID, serverSettings.language, serverSettings.autoVerify, serverSettings.autoAddUnverified, serverSettings.verifyMessage, serverSettings.logChannel, serverSettings.errorNotifyType, serverSettings.errorNotifyTarget, JSON.stringify(serverSettings.defaultRoles), JSON.stringify(serverSettings.domainRoles), serverSettings.eventForumId || "", serverSettings.spamReportChannelId || "", serverSettings.chatbotModel || "gemini-2.5-flash", serverSettings.scraperModel || "gemini-2.5-flash"])
+            "INSERT OR REPLACE INTO guilds (guildid, domains, blacklist, verifiedrole, unverifiedrole, channelid, messageid, language, autoVerify, autoAddUnverified, verifyMessage, logChannel, errorNotifyType, errorNotifyTarget, defaultRoles, domainRoles, eventForumId, spamReportChannelId, chatbotModel, scraperModel, otpExpiry, maxOtpAttempts, modPingRoleId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [guildID, JSON.stringify(serverSettings.domains), JSON.stringify(serverSettings.blacklist), serverSettings.verifiedRoleName, serverSettings.unverifiedRoleName, serverSettings.channelID, serverSettings.messageID, serverSettings.language, serverSettings.autoVerify, serverSettings.autoAddUnverified, serverSettings.verifyMessage, serverSettings.logChannel, serverSettings.errorNotifyType, serverSettings.errorNotifyTarget, JSON.stringify(serverSettings.defaultRoles), JSON.stringify(serverSettings.domainRoles), serverSettings.eventForumId || "", serverSettings.spamReportChannelId || "", serverSettings.chatbotModel || "gemini-2.5-flash", serverSettings.scraperModel || "gemini-2.5-flash", serverSettings.otpExpiry || 10, serverSettings.maxOtpAttempts || 3, serverSettings.modPingRoleId || ""])
     }
 
     async getServerSettings(guildID, callback) {
@@ -188,6 +193,9 @@ class Database {
                     serverSettings.spamReportChannelId = result.spamReportChannelId || ""
                     serverSettings.chatbotModel = result.chatbotModel || "gemini-2.5-flash"
                     serverSettings.scraperModel = result.scraperModel || "gemini-2.5-flash"
+                    serverSettings.otpExpiry = result.otpExpiry != null ? result.otpExpiry : 10
+                    serverSettings.maxOtpAttempts = result.maxOtpAttempts != null ? result.maxOtpAttempts : 3
+                    serverSettings.modPingRoleId = result.modPingRoleId || ""
                     
                     // Parse domains (JSON array, with fallback for legacy comma-separated format)
                     try {
@@ -242,6 +250,20 @@ class Database {
                 }
                 if (result !== undefined) {
                     callback(new EmailUser(result.email, result.userID, result.guildID, result.groupID, result.isPublic))
+                }
+            }
+        )
+    }
+
+    getUserByDiscordId(userID, guildID, callback) {
+        this.db.get("SELECT * FROM userEmails WHERE guildID = ? AND userID = ?", [guildID, userID], (err, result) => {
+                if (err) {
+                    throw err;
+                }
+                if (result !== undefined) {
+                    callback(new EmailUser(result.email, result.userID, result.guildID, result.groupID, result.isPublic))
+                } else {
+                    callback(null);
                 }
             }
         )

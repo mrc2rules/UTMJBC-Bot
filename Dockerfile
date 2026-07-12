@@ -33,8 +33,8 @@ COPY --chown=node:node language/ ./language/
 # Run the container under the non-root 'node' user (UID 1000)
 USER node
 
-# Expose stats API port
-EXPOSE 8181
+# Expose stats API port and Web Dashboard port
+EXPOSE 8181 8182
 
 # Run the sharder directly in exec form
 CMD ["node", "src/sharder.js"]

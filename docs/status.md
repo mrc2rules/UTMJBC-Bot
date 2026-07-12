@@ -1,7 +1,7 @@
 ---
 title: Service Status
-description: Status page for UTMJBC Bot services including the mail verification server and bot API.
-image: https://media.discordapp.net/attachments/1423008246691659898/1521352248779866193/image.png?ex=6a448531&is=6a4333b1&hm=75b044f51e709f66df528d721c97b6b507a935dec42681d7edbc42e34a96ed07&=&format=webp&quality=lossless&width=771&height=770
+description: Status page for Octavia services including the mail verification server and bot API.
+image: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png
 ---
 
 # Service Status

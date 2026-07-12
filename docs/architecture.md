@@ -1,11 +1,11 @@
 ---
 title: System Architecture
-description: Deep-dive technical architecture and subsystem workflows of UTMJBC Bot.
+description: Deep-dive technical architecture and subsystem workflows of Octavia.
 ---
 
 # System Architecture
 
-UTMJBC Bot is designed as a modular, sharded Discord application combining an identity verification pipeline, an AI-driven event scraper, and an Express telemetry server.
+Octavia is designed as a modular, sharded Discord application combining an identity verification pipeline, an AI-driven event scraper, and an Express telemetry server.
 
 ---
 

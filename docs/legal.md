@@ -1,6 +1,6 @@
 # Legal
 
-The Terms of Service and Privacy Policy for the Discord EmailBot.
+The Terms of Service and Privacy Policy for Octavia.
 
 **Last Updated:** January 2026
 
@@ -62,11 +62,11 @@ Email: <a href="mailto:admin@rahbab.com">Send Email</a>
 
 ### Overview
 
-This Privacy Policy explains how the EmailBot collects, uses, and protects your information when you use our service.
+This Privacy Policy explains how Octavia collects, uses, and protects your information when you use our service.
 
 ### Data Controller
 
-The data controller responsible for your information is the administrator of UTMJBC Bot, reachable at [admin@rahbab.com](mailto:admin@rahbab.com).
+The data controller responsible for your information is the administrator of Octavia, reachable at [admin@rahbab.com](mailto:admin@rahbab.com).
 
 ### Legal Basis for Processing
 
@@ -83,7 +83,7 @@ The bot uses the stored data to:
 - Store server-specific settings and configurations
 - Provide the verification functionality
 
-The data is only used by the EmailBot and will not be shared with any third-party services.
+The data is only used by Octavia and will not be shared with any third-party services.
 
 ### Stored Information
 

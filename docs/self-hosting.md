@@ -1,11 +1,11 @@
 ---
 title: Self Hosting Guide
-description: Complete instructions for hosting, configuring, and deploying your own instance of UTMJBC Bot.
+description: Complete instructions for hosting, configuring, and deploying your own instance of Octavia.
 ---
 
 # Self Hosting Guide
 
-This guide covers everything required to deploy your own instance of UTMJBC Bot, including Docker deployment, manual setup, and configuring the live analytics dashboard.
+This guide covers everything required to deploy your own instance of Octavia, including Docker deployment, manual setup, and configuring the live analytics dashboard.
 
 ---
 
@@ -155,7 +155,7 @@ The bot tracks real-time verifications, email dispatches, and guild counts acros
 
 ### Enabling Live Dashboard on Self-Hosted Instances
 
-If you host your own MkDocs documentation site and want the live graphs on `index.md` and `statistics.md` to display your self-hosted bot's statistics:
+If you host your own MkDocs documentation site and want the live graphs on `index.md` and `statistics.md` to display your self-hosted Octavia instance's statistics:
 
 1.  **Expose Port 8181:** Ensure your hosting provider or firewall opens port `8181` to public traffic, or set up a reverse proxy (Nginx/Cloudflare) mapping an SSL domain (e.g., `https://api.yourdomain.com`) to port `8181`.
 2.  **Configure CORS:** `src/api/ServerStatsAPI.js` uses `origin: "*"` by default to allow cross-origin analytics requests from any frontend documentation site.

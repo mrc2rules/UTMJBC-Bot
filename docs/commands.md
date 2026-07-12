@@ -1,11 +1,11 @@
 ---
 title: Commands Reference
-description: Complete listing of Discord slash commands for UTMJBC Bot.
+description: Complete listing of Discord slash commands for Octavia.
 ---
 
 # Commands Reference
 
-All interactions with UTMJBC Bot use Discord slash commands. 
+All interactions with Octavia use Discord slash commands. 
 
 !!! note "Permission Requirements"
     Commands marked as **Admin Only** require the user to hold the **Administrator** permission in the Discord guild, unless otherwise stated.

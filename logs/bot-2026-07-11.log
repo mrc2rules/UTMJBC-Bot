@@ -1,0 +1,76 @@
+[2026-07-11T23:11:13.421Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-11T23:11:13.747Z] [INFO ] [Database] Running one-time channel ID normalization migration...
+[2026-07-11T23:11:15.655Z] [INFO ] App listening on port 8181!
+[2026-07-11T23:11:15.656Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-11T23:11:16.043Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-11T23:11:16.046Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-11T23:11:16.462Z] [INFO ] [TelegramListener] Connected to Telegram!
+[2026-07-11T23:11:16.484Z] [INFO ] [AutoClose] Running auto-close checks and seen messages cleanup...
+[2026-07-11T23:11:16.485Z] [INFO ] [TelegramListener] Ready. Use /scrape to start a scrape cycle.
+[2026-07-11T23:11:16.486Z] [INFO ] [AutoClose] Successfully pruned old seen messages.
+[2026-07-11T23:11:16.487Z] [INFO ] [AutoClose] No open events to check.
+[2026-07-11T23:17:05.995Z] [INFO ] 
+[System] SIGINT received — closing database...
+[2026-07-11T23:17:14.531Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-11T23:17:32.881Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-11T23:17:35.035Z] [INFO ] App listening on port 8181!
+[2026-07-11T23:17:35.035Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-11T23:17:35.415Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-11T23:17:35.417Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-11T23:17:35.806Z] [INFO ] [TelegramListener] Connected to Telegram!
+[2026-07-11T23:17:35.827Z] [INFO ] [AutoClose] Running auto-close checks and seen messages cleanup...
+[2026-07-11T23:17:35.828Z] [INFO ] [TelegramListener] Ready. Use /scrape to start a scrape cycle.
+[2026-07-11T23:17:35.829Z] [INFO ] [AutoClose] Successfully pruned old seen messages.
+[2026-07-11T23:17:35.830Z] [INFO ] [AutoClose] No open events to check.
+[2026-07-11T23:18:59.427Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-11T23:19:01.556Z] [INFO ] App listening on port 8181!
+[2026-07-11T23:19:01.556Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-11T23:19:01.903Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-11T23:19:01.905Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-11T23:19:02.375Z] [INFO ] [TelegramListener] Connected to Telegram!
+[2026-07-11T23:19:02.397Z] [INFO ] [AutoClose] Running auto-close checks and seen messages cleanup...
+[2026-07-11T23:19:02.398Z] [INFO ] [TelegramListener] Ready. Use /scrape to start a scrape cycle.
+[2026-07-11T23:19:02.399Z] [INFO ] [AutoClose] Successfully pruned old seen messages.
+[2026-07-11T23:19:02.399Z] [INFO ] [AutoClose] No open events to check.
+[2026-07-11T23:20:17.290Z] [INFO ] 
+[System] SIGINT received — closing database...
+[2026-07-11T23:20:54.765Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-11T23:20:58.540Z] [INFO ] App listening on port 8181!
+[2026-07-11T23:20:58.540Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-11T23:20:58.906Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-11T23:20:58.908Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-11T23:20:59.321Z] [INFO ] [TelegramListener] Connected to Telegram!
+[2026-07-11T23:20:59.357Z] [INFO ] [AutoClose] Running auto-close checks and seen messages cleanup...
+[2026-07-11T23:20:59.358Z] [INFO ] [TelegramListener] Ready. Use /scrape to start a scrape cycle.
+[2026-07-11T23:20:59.359Z] [INFO ] [AutoClose] Successfully pruned old seen messages.
+[2026-07-11T23:20:59.360Z] [INFO ] [AutoClose] No open events to check.
+[2026-07-11T23:22:28.416Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-11T23:22:30.266Z] [INFO ] App listening on port 8181!
+[2026-07-11T23:22:30.267Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-11T23:22:30.666Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-11T23:22:30.668Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-11T23:22:31.066Z] [INFO ] [TelegramListener] Connected to Telegram!
+[2026-07-11T23:22:31.088Z] [INFO ] [AutoClose] Running auto-close checks and seen messages cleanup...
+[2026-07-11T23:22:31.089Z] [INFO ] [TelegramListener] Ready. Use /scrape to start a scrape cycle.
+[2026-07-11T23:22:31.091Z] [INFO ] [AutoClose] Successfully pruned old seen messages.
+[2026-07-11T23:22:31.091Z] [INFO ] [AutoClose] No open events to check.
+[2026-07-11T23:23:09.860Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-11T23:23:11.944Z] [INFO ] App listening on port 8181!
+[2026-07-11T23:23:11.945Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-11T23:23:12.291Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-11T23:23:12.293Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-11T23:23:12.736Z] [INFO ] [TelegramListener] Connected to Telegram!
+[2026-07-11T23:23:12.778Z] [INFO ] [AutoClose] Running auto-close checks and seen messages cleanup...
+[2026-07-11T23:23:12.779Z] [INFO ] [TelegramListener] Ready. Use /scrape to start a scrape cycle.
+[2026-07-11T23:23:12.780Z] [INFO ] [AutoClose] Successfully pruned old seen messages.
+[2026-07-11T23:23:12.781Z] [INFO ] [AutoClose] No open events to check.
+[2026-07-11T23:30:40.627Z] [INFO ] [Database] Using database at: C:\Users\rmash\Documents\UTM\UTMJBC-Bot - Copy\data\telegram_events.db
+[2026-07-11T23:30:42.730Z] [INFO ] App listening on port 8181!
+[2026-07-11T23:30:42.730Z] [INFO ] [DashboardServer] Octavia Web Dashboard listening on port 8182!
+[2026-07-11T23:30:43.170Z] [INFO ] [Shard 0] Successfully registered application commands for UTM Johor Bahru Community: 1/1
+[2026-07-11T23:30:43.172Z] [INFO ] [Shard 0] Finished registering commands for all guilds
+[2026-07-11T23:30:43.660Z] [INFO ] [TelegramListener] Connected to Telegram!
+[2026-07-11T23:30:43.682Z] [INFO ] [AutoClose] Running auto-close checks and seen messages cleanup...
+[2026-07-11T23:30:43.682Z] [INFO ] [TelegramListener] Ready. Use /scrape to start a scrape cycle.
+[2026-07-11T23:30:43.683Z] [INFO ] [AutoClose] Successfully pruned old seen messages.
+[2026-07-11T23:30:43.684Z] [INFO ] [AutoClose] No open events to check.

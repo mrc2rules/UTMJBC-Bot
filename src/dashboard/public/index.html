@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Octavia — Admin Dashboard</title>
+    <meta name="description" content="Octavia Web Dashboard — Configure email verification, roles, Telegram event scraping, and AI models for your Discord community.">
+    <link rel="icon" href="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        octavia: {
+                            50: '#fff0f3', 100: '#ffdde4',
+                            500: '#ff4d6d', 600: '#e63956', 700: '#c81d3a',
+                            dark: '#0f1117', card: '#1a1e29', border: '#2a3040'
+                        }
+                    },
+                    fontFamily: { outfit: ['Outfit','sans-serif'], inter: ['Inter','sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f1117; color: #f3f4f6; }
+        h1,h2,h3,h4,.font-heading { font-family: 'Outfit', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1117; }
+        ::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3b435a; }
+        .glass-card { background: rgba(26,30,41,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(42,48,64,0.8); }
+        .tag-pill { display:inline-flex; align-items:center; gap:6px; background:#2a3040; border:1px solid #3b435a; padding:4px 10px; border-radius:9999px; font-size:0.825rem; color:#e5e7eb; transition:all 0.2s; }
+        .tag-pill:hover { border-color:#ff4d6d; }
+        .spinner { border:3px solid rgba(255,255,255,0.1); border-left-color:#ff4d6d; border-radius:50%; width:24px; height:24px; animation:spin 0.8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* Sidebar nav */
+        .nav-item { display:flex; align-items:center; gap:10px; padding:7px 12px; border-radius:10px; cursor:pointer; font-size:0.875rem; font-weight:500; color:#9ca3af; transition:all 0.15s; width:100%; text-align:left; border:none; background:none; }
+        .nav-item:hover { background:rgba(255,255,255,0.05); color:#fff; }
+        .nav-item.active { background:rgba(255,77,109,0.12); color:#ff4d6d; }
+        .nav-icon { opacity:0.6; font-size:1rem; width:20px; text-align:center; flex-shrink:0; }
+        .nav-item.active .nav-icon { opacity:1; }
+        .nav-section-label { font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#4b5563; padding:16px 12px 4px; }
+
+        /* Server dropdown */
+        #server-dropdown-panel { display:none; position:absolute; top:calc(100% + 8px); left:0; right:0; min-width:280px; background:#1a1e29; border:1px solid #2a3040; border-radius:14px; box-shadow:0 16px 48px rgba(0,0,0,0.6); z-index:200; overflow:hidden; max-height:380px; overflow-y:auto; }
+        #server-dropdown-panel.open { display:block; }
+        .server-option { display:flex; align-items:center; gap:12px; padding:10px 14px; cursor:pointer; transition:background 0.1s; }
+        .server-option:hover { background:rgba(255,255,255,0.05); }
+        .server-option.active-guild { background:rgba(255,77,109,0.1); }
+
+        /* Tab panels */
+        .tab-panel { display:none; flex-direction:column; gap:20px; }
+        .tab-panel.active { display:flex; }
+
+        /* Field helpers */
+        .field-label { font-size:0.75rem; font-weight:600; color:#9ca3af; display:block; margin-bottom:4px; }
+        .field-input { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:10px 16px; font-size:0.875rem; color:#fff; outline:none; transition:border-color 0.15s; }
+        .field-input:focus { border-color:#ff4d6d; }
+        .field-textarea { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:12px 16px; font-size:0.875rem; color:#fff; outline:none; resize:vertical; transition:border-color 0.15s; }
+        .field-textarea:focus { border-color:#ff4d6d; }
+        .field-select { width:100%; background:#0f1117; border:1px solid #2a3040; border-radius:12px; padding:10px 16px; font-size:0.875rem; color:#fff; outline:none; transition:border-color 0.15s; }
+        .field-select:focus { border-color:#ff4d6d; }
+
+        /* Button variants */
+        .btn-primary { background:#ff4d6d; color:#fff; font-weight:600; padding:10px 20px; border-radius:12px; font-size:0.875rem; transition:all 0.15s; border:none; cursor:pointer; }
+        .btn-primary:hover { background:#e63956; }
+        .btn-secondary { background:#2a3040; color:#fff; font-weight:500; padding:10px 20px; border-radius:12px; font-size:0.875rem; transition:all 0.15s; border:none; cursor:pointer; }
+        .btn-secondary:hover { background:#3b435a; }
+        .btn-danger { background:rgba(239,68,68,0.15); color:#f87171; font-weight:500; padding:10px 20px; border-radius:12px; font-size:0.875rem; transition:all 0.15s; border:1px solid rgba(239,68,68,0.3); cursor:pointer; }
+        .btn-danger:hover { background:rgba(239,68,68,0.8); color:#fff; border-color:transparent; }
+
+        .section-title { font-size:1.1rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:10px; }
+        .section-desc { font-size:0.8rem; color:#6b7280; margin-top:2px; }
+        .card-title { font-size:0.9rem; font-weight:600; color:#fff; margin-bottom:4px; }
+        .card-desc { font-size:0.75rem; color:#6b7280; margin-bottom:14px; line-height:1.6; }
+        .sub-divider { border-top:1px solid #2a3040; padding-top:18px; margin-top:2px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-octavia-500 selection:text-white">
+
+<!-- ══════════ NAVBAR ══════════ -->
+<header class="sticky top-0 z-50 glass-card border-b border-octavia-border px-5 py-3 flex items-center gap-4">
+    <div class="flex items-center gap-3 shrink-0">
+        <img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png" alt="Octavia" class="w-8 h-8 rounded-full border border-octavia-500/30">
+        <div>
+            <span class="text-base font-bold text-white font-heading">Octavia</span>
+            <span class="ml-2 text-[10px] uppercase tracking-wider bg-octavia-500/15 text-octavia-500 px-2 py-0.5 rounded-full border border-octavia-500/20">Admin Dashboard</span>
+        </div>
+    </div>
+
+    <div class="flex-1 flex justify-center">
+        <div id="server-picker-wrap" class="relative hidden">
+            <button id="server-picker-btn" onclick="toggleServerDropdown()" class="flex items-center gap-2.5 bg-octavia-dark border border-octavia-border hover:border-octavia-500/40 px-3 py-2 rounded-xl transition-all min-w-[220px] max-w-xs">
+                <img id="picker-guild-icon" src="" class="w-6 h-6 rounded-lg object-cover bg-octavia-border shrink-0" alt="">
+                <span id="picker-guild-name" class="text-sm font-semibold text-white truncate flex-1 text-left">Select Server</span>
+                <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div id="server-dropdown-panel">
+                <div id="server-dropdown-list" class="p-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="nav-user-container" class="flex items-center shrink-0">
+        <div class="spinner"></div>
+    </div>
+</header>
+
+<!-- ══════════ MAIN LAYOUT ══════════ -->
+<main class="flex-1 flex overflow-hidden" style="height:calc(100vh - 57px)">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="hidden w-60 shrink-0 border-r border-octavia-border bg-[#0c0f18] flex-col overflow-y-auto">
+        <div id="server-identity" class="p-4 border-b border-octavia-border">
+            <div class="flex items-center gap-3 mb-3">
+                <img id="active-guild-icon" src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png" class="w-10 h-10 rounded-xl object-cover bg-octavia-border border border-white/5 shrink-0" alt="">
+                <div class="overflow-hidden flex-1">
+                    <div id="active-guild-name" class="text-sm font-bold text-white truncate">Select a Server</div>
+                    <div id="active-guild-id" class="text-[10px] font-mono text-gray-500 truncate">—</div>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="loadGuildSettings(currentGuildId)" class="flex-1 flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-white border border-octavia-border hover:border-white/20 py-1.5 rounded-lg transition-all">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Refresh
+                </button>
+                <button onclick="saveSettings()" id="save-btn" class="flex-1 bg-octavia-500 hover:bg-octavia-600 text-white text-xs font-bold py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-lg shadow-octavia-500/20">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Save
+                </button>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-3 flex flex-col gap-0.5">
+            <div class="nav-section-label">Configuration</div>
+            <button class="nav-item active" onclick="switchTab('general')" id="nav-general"><span class="nav-icon">⚙️</span><span>General</span></button>
+            <button class="nav-item" onclick="switchTab('verification')" id="nav-verification"><span class="nav-icon">📧</span><span>Email Verification</span></button>
+            <button class="nav-item" onclick="switchTab('roles')" id="nav-roles"><span class="nav-icon">👥</span><span>Roles</span></button>
+            <button class="nav-item" onclick="switchTab('channels')" id="nav-channels"><span class="nav-icon">📣</span><span>Channels</span></button>
+            <div class="nav-section-label">Features</div>
+            <button class="nav-item" onclick="switchTab('events')" id="nav-events"><span class="nav-icon">📅</span><span>Events Manager</span></button>
+            <button class="nav-item" onclick="switchTab('askai')" id="nav-askai"><span class="nav-icon">🤖</span><span>AskOctavia</span></button>
+            <div class="nav-section-label">Administration</div>
+            <button class="nav-item" onclick="switchTab('tools')" id="nav-tools"><span class="nav-icon">🛠️</span><span>Users &amp; Tools</span></button>
+            <button class="nav-item" onclick="switchTab('status')" id="nav-status"><span class="nav-icon">📊</span><span>Bot Status</span></button>
+        </nav>
+    </aside>
+
+    <!-- CONTENT -->
+    <section id="content-area" class="flex-1 overflow-y-auto flex flex-col items-center justify-center p-8">
+
+        <div id="loading-state" class="flex flex-col items-center gap-4 py-20">
+            <div class="spinner !w-10 !h-10"></div>
+            <p class="text-sm text-gray-400">Authenticating...</p>
+        </div>
+
+        <div id="login-hero" class="hidden max-w-md w-full glass-card p-8 rounded-2xl text-center shadow-2xl border border-octavia-border relative overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-octavia-500/10 rounded-full blur-3xl"></div>
+            <img src="https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png" class="w-20 h-20 rounded-full mx-auto mb-6 shadow-xl border-2 border-octavia-500" alt="">
+            <h2 class="text-2xl font-bold text-white mb-2 font-heading">Welcome to Octavia</h2>
+            <p class="text-gray-400 text-sm mb-8 leading-relaxed">Log in with Discord to manage email verification, roles, AI models, and Telegram events for your communities.</p>
+            <a href="/auth/discord" class="w-full inline-flex items-center justify-center gap-3 bg-octavia-500 hover:bg-octavia-600 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg shadow-octavia-500/25 transition-all active:scale-[0.98]">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028z"/></svg>
+                Log in with Discord
+            </a>
+        </div>
+
+        <div id="settings-container" class="hidden w-full max-w-4xl">
+
+            <!-- ── GENERAL ── -->
+            <div id="tab-general" class="tab-panel active">
+                <div><div class="section-title">⚙️ General</div><div class="section-desc">Bot behaviour, automation, and verification email settings.</div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">UI &amp; Embed Language</div>
+                        <div class="card-desc">Language for verification modals and system embeds.</div>
+                        <select id="setting-language" class="field-select">
+                            <option value="english">English (Default)</option>
+                            <option value="german">German (Deutsch)</option>
+                            <option value="french">French (Français)</option>
+                            <option value="spanish">Spanish (Español)</option>
+                            <option value="polish">Polish (Polski)</option>
+                            <option value="hebrew">Hebrew (עברית)</option>
+                            <option value="korean">Korean (한국어)</option>
+                        </select>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl flex flex-col gap-4">
+                        <div>
+                            <div class="card-title">Automatic Verification on Join</div>
+                            <div class="card-desc">Auto-assign roles if user verified in another Octavia server.</div>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" id="setting-autoVerify" class="w-4 h-4 rounded accent-octavia-500">
+                                <span class="text-sm text-white">Enable Global Instant Verification</span>
+                            </label>
+                        </div>
+                        <div class="sub-divider">
+                            <div class="card-title">Auto-Assign Unverified Role on Join</div>
+                            <div class="card-desc">Give new members the Unverified role automatically.</div>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" id="setting-autoAddUnverified" class="w-4 h-4 rounded accent-octavia-500">
+                                <span class="text-sm text-white">Enable Auto Unverified Role</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="card-title">Custom Verification Email Prefix</div>
+                    <div class="card-desc">Text prepended above the OTP inside verification emails sent to members.</div>
+                    <textarea id="setting-verifyMessage" rows="3" placeholder="Welcome to UTM JBC! Please enter the code below in Discord..." class="field-textarea"></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">OTP Expiry Duration</div>
+                        <div class="card-desc">How long (in minutes) the one-time verification code remains valid before expiring.</div>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="setting-otpExpiry" min="1" max="60" placeholder="10" class="field-input flex-1">
+                            <span class="text-sm text-gray-400 shrink-0">minutes</span>
+                        </div>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">Max OTP Attempts</div>
+                        <div class="card-desc">Failed attempts before the user is locked out and must restart.</div>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="setting-maxOtpAttempts" min="1" max="10" placeholder="3" class="field-input flex-1">
+                            <span class="text-sm text-gray-400 shrink-0">attempts</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── EMAIL VERIFICATION ── -->
+            <div id="tab-verification" class="tab-panel">
+                <div><div class="section-title">📧 Email Verification</div><div class="section-desc">Control which emails are accepted, blocked, and what roles they automatically unlock.</div></div>
+
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="card-title">Allowed Email Domains</div>
+                    <div class="card-desc">Only emails matching these patterns can verify. Supports <code class="text-octavia-500">*</code> wildcard (e.g. <code class="text-gray-300">@utm.my</code> or <code class="text-gray-300">@*.utm.my</code>). Press Enter to add.</div>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="domain-input" placeholder="e.g. @utm.my" class="field-input flex-1">
+                        <button onclick="addDomainTag()" class="btn-secondary px-5">Add Domain</button>
+                    </div>
+                    <div id="domains-list" class="flex flex-wrap gap-2 min-h-[44px] p-3 bg-octavia-dark/40 rounded-xl border border-octavia-border/50"></div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl border-red-500/20">
+                    <div class="card-title flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Email &amp; Domain Blacklist</div>
+                    <div class="card-desc">These patterns are rejected even if they match an allowed domain.</div>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="blacklist-input" placeholder="e.g. spammer@utm.my or *@tempmail.com" class="field-input flex-1 focus:!border-red-500">
+                        <button onclick="addBlacklistTag()" class="btn-danger px-5">Add Block</button>
+                    </div>
+                    <div id="blacklist-list" class="flex flex-wrap gap-2 min-h-[44px] p-3 bg-octavia-dark/40 rounded-xl border border-octavia-border/50"></div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="card-title">Domain → Role Mappings</div>
+                    <div class="card-desc">Automatically assign additional Discord roles when a user verifies with a matching email domain (e.g. <code class="text-gray-300">student.utm.my</code> → <code class="text-gray-300">@Undergraduate</code>).</div>
+                    <div class="flex flex-col md:flex-row gap-3 mb-4">
+                        <input type="text" id="domainRole-input" placeholder="Domain pattern (e.g. student.utm.my)" class="field-input flex-1">
+                        <select id="domainRole-role-select" class="field-select md:w-52"><option value="">Select Role...</option></select>
+                        <button onclick="addDomainRoleMapping()" class="btn-primary whitespace-nowrap px-5">Add Mapping</button>
+                    </div>
+                    <div id="domainRoles-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 min-h-[50px] p-3 bg-octavia-dark/40 rounded-xl border border-octavia-border/50"></div>
+                </div>
+            </div>
+
+            <!-- ── ROLES ── -->
+            <div id="tab-roles" class="tab-panel">
+                <div><div class="section-title">👥 Roles</div><div class="section-desc">Configure which Discord roles Octavia assigns during verification.</div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">Default Verified Roles</div>
+                        <div class="card-desc">All roles assigned when a member completes email verification.</div>
+                        <div id="defaultRoles-picker" class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1"></div>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                            <div class="card-title">Unverified Role</div>
+                            <div class="card-desc">Role given to unverified members; removed when verification completes.</div>
+                            <select id="setting-unverifiedRoleName" class="field-select"><option value="">None (Disabled)</option></select>
+                        </div>
+                        <div class="mt-5 p-3 rounded-xl bg-octavia-dark/60 border border-octavia-border text-xs text-gray-400 leading-relaxed">
+                            <span class="text-octavia-500 font-semibold">Hierarchy reminder:</span> Octavia's bot role must rank higher than any role it assigns or removes in your server settings.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── CHANNELS ── -->
+            <div id="tab-channels" class="tab-panel">
+                <div><div class="section-title">📣 Channels</div><div class="section-desc">Set up where Octavia posts buttons, logs, and moderator alerts.</div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-5 rounded-2xl flex flex-col gap-4">
+                        <div>
+                            <div class="card-title">Verification Channel &amp; Button</div>
+                            <div class="card-desc">Where the persistent <code class="text-octavia-500">/button</code> verification embed is posted.</div>
+                            <div class="flex flex-col gap-3">
+                                <div>
+                                    <label class="field-label">Channel:</label>
+                                    <select id="setting-channelID" class="field-select"><option value="">None</option></select>
+                                </div>
+                                <div>
+                                    <label class="field-label">Button Message ID (leave blank to post new):</label>
+                                    <input type="text" id="setting-messageID" placeholder="Numeric Discord Message ID" class="field-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sub-divider">
+                            <label class="field-label text-octavia-500">⚡ Quick Post: Verification Button</label>
+                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                <input type="text" id="button-custom-text" placeholder="Button text (default: Verify)" class="field-input text-xs">
+                                <input type="text" id="button-custom-color" placeholder="Hex color (e.g. #5865F2)" class="field-input text-xs">
+                            </div>
+                            <input type="text" id="button-custom-title" placeholder="Custom Embed Title (optional)" class="field-input text-xs mb-2">
+                            <textarea id="button-custom-msg" rows="2" placeholder="Custom Embed Instructions (optional)" class="field-textarea text-xs mb-3"></textarea>
+                            <button onclick="sendVerificationButton()" class="btn-primary w-full text-sm">Post Verification Button to Channel</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-5">
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="card-title">Audit Log Channel</div>
+                            <div class="card-desc">Logs successful verifications, manual overrides, and OTP dispatches.</div>
+                            <select id="setting-logChannel" class="field-select"><option value="">Disabled</option></select>
+                        </div>
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="card-title">Error Notification Target</div>
+                            <div class="card-desc">Where critical system errors and alerts are sent.</div>
+                            <div class="flex gap-2">
+                                <select id="setting-errorNotifyType" class="field-select w-1/3">
+                                    <option value="owner">Server Owner</option>
+                                    <option value="channel">Channel</option>
+                                    <option value="user">User ID</option>
+                                </select>
+                                <input type="text" id="setting-errorNotifyTarget" placeholder="Channel or User ID" class="field-input flex-1">
+                            </div>
+                        </div>
+                        <div class="glass-card p-5 rounded-2xl">
+                            <div class="card-title">Moderation Ping Role</div>
+                            <div class="card-desc">Role pinged when spam is detected or repeated verification failures occur.</div>
+                            <select id="setting-modPingRoleId" class="field-select"><option value="">None (No Mod Pings)</option></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── EVENTS MANAGER ── -->
+            <div id="tab-events" class="tab-panel">
+                <div><div class="section-title">📅 Events Manager</div><div class="section-desc">Telegram scraping, event publishing to Discord, and spam filtering.</div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">Scraper AI Model</div>
+                        <div class="card-desc">Gemini model used to extract event details from raw Telegram messages.</div>
+                        <input type="text" id="setting-scraperModel" placeholder="gemini-2.5-flash" class="field-input font-mono">
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">Event Forum Channel</div>
+                        <div class="card-desc">Discord Forum channel where structured event threads are posted.</div>
+                        <select id="setting-eventForumId" class="field-select"><option value="">None (Publisher Disabled)</option></select>
+                    </div>
+                </div>
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="card-title">Spam &amp; Alert Report Channel</div>
+                    <div class="card-desc">Where moderators receive alert cards with Delete / Dismiss buttons for detected non-academic content.</div>
+                    <select id="setting-spamReportChannelId" class="field-select"><option value="">None (No Spam Alerts)</option></select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Keyword Blacklist</div>
+                        <div class="card-desc">Telegram messages containing these keywords are discarded before Gemini extraction.</div>
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="tgblacklist-input" placeholder="e.g. casino" class="field-input flex-1 focus:!border-red-500">
+                            <button onclick="addTgBlacklistTag()" class="btn-danger px-4">Block</button>
+                        </div>
+                        <div id="tgblacklist-list" class="flex flex-wrap gap-2 min-h-[44px] max-h-40 overflow-y-auto p-3 bg-octavia-dark/40 rounded-xl border border-octavia-border/50"></div>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                            <div class="card-title">Manual Scraper Trigger</div>
+                            <div class="card-desc">Immediately fetch unread Telegram messages and publish events without waiting for the scheduled interval.</div>
+                            <div class="p-3 bg-octavia-dark/60 rounded-xl border border-octavia-border text-xs text-gray-400 leading-relaxed mb-4">
+                                <span class="text-octavia-500 font-semibold">Scheduled:</span> Runs on your configured interval (every 6 hrs by default).<br>
+                                <span class="text-octavia-500 font-semibold">Manual:</span> Fetches since last check immediately.
+                            </div>
+                        </div>
+                        <button onclick="triggerTelegramScraper()" id="scrape-btn" class="btn-secondary w-full flex items-center justify-center gap-2">🔄 Run Scraper Now</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── ASKAI ── -->
+            <div id="tab-askai" class="tab-panel">
+                <div><div class="section-title">🤖 AskOctavia</div><div class="section-desc">Configure the <code class="text-octavia-500 text-sm">/askai</code> Gemini chatbot that answers member questions about UTM.</div></div>
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="card-title">Chatbot AI Model</div>
+                    <div class="card-desc">Gemini model used for the <code>/askai</code> slash command. Independent of the scraper model.</div>
+                    <input type="text" id="setting-chatbotModel" placeholder="gemini-2.5-flash" class="field-input font-mono">
+                    <p class="text-xs text-gray-500 mt-2">Recommended: <code class="text-gray-400">gemini-2.5-flash</code> (fast) · <code class="text-gray-400">gemini-2.5-pro</code> (higher quality)</p>
+                </div>
+                <div class="glass-card p-5 rounded-2xl bg-octavia-dark/30">
+                    <div class="card-title flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> How AskOctavia Works</div>
+                    <ul class="text-xs text-gray-400 space-y-2 leading-relaxed">
+                        <li>🗣️ Members run <code class="text-gray-300">/askai &lt;question&gt;</code> in any channel.</li>
+                        <li>🧠 The question is sent to the configured Gemini model with UTM context.</li>
+                        <li>📩 The response is posted as a formatted embed in the same channel.</li>
+                        <li>⚠️ All responses carry a disclaimer that AI answers may not be accurate.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ── TOOLS ── -->
+            <div id="tab-tools" class="tab-panel">
+                <div><div class="section-title">🛠️ Users &amp; Tools</div><div class="section-desc">Member management, manual verification override, and data operations.</div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                            <div class="card-title">Manual Verification</div>
+                            <div class="card-desc">Bypass OTP — directly assign verified role and record an email for any Discord member.</div>
+                            <div class="flex flex-col gap-3">
+                                <div><label class="field-label">Discord User ID:</label><input type="text" id="manual-user-id" placeholder="e.g. 123456789012345678" class="field-input"></div>
+                                <div><label class="field-label">Email Address:</label><input type="email" id="manual-email" placeholder="e.g. john.doe@utm.my" class="field-input"></div>
+                            </div>
+                        </div>
+                        <button onclick="manualVerifyUser()" class="btn-primary w-full mt-4">Verify Member Now</button>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">User Data Lookup &amp; Clear</div>
+                        <div class="card-desc">Look up a member's verification status or wipe their record.</div>
+                        <div class="mb-3">
+                            <label class="field-label">Discord User ID:</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="lookup-user-id" placeholder="e.g. 123456789012345678" class="field-input flex-1">
+                                <button onclick="lookupUser()" class="btn-secondary px-4">Check</button>
+                            </div>
+                        </div>
+                        <div id="lookup-result" class="hidden p-4 bg-octavia-dark/60 rounded-xl border border-octavia-border text-xs">
+                            <div id="lookup-result-content" class="text-gray-300 font-mono break-all mb-3"></div>
+                            <button onclick="deleteUserData()" class="btn-danger w-full">Unverify &amp; Delete Data</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">Export Verified Members</div>
+                        <div class="card-desc">Download a CSV of all verified members: Discord ID, email hash, group, and public status.</div>
+                        <button onclick="exportVerifiedMembers()" class="btn-secondary w-full flex items-center justify-center gap-2">⬇️ Download verified-members.csv</button>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl">
+                        <div class="card-title">Bot Invite Link</div>
+                        <div class="card-desc">Generate an invite URL to add Octavia to another Discord server.</div>
+                        <button onclick="generateInviteLink()" class="btn-secondary w-full flex items-center justify-center gap-2 mb-3">🔗 Generate Invite Link</button>
+                        <div id="invite-link-result" class="hidden p-3 bg-octavia-dark/60 rounded-xl border border-octavia-border">
+                            <a id="invite-link-url" href="#" target="_blank" class="text-xs text-octavia-500 break-all hover:underline"></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── STATUS ── -->
+            <div id="tab-status" class="tab-panel">
+                <div><div class="section-title">📊 Bot Status</div><div class="section-desc">Live metrics for the Octavia bot engine.</div></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="glass-card p-5 rounded-2xl"><span class="text-xs text-gray-400 block mb-1">Engine Uptime</span><span id="stat-uptime" class="text-2xl font-bold text-white font-mono">—</span></div>
+                    <div class="glass-card p-5 rounded-2xl"><span class="text-xs text-gray-400 block mb-1">RAM / Shards</span><span id="stat-memory" class="text-2xl font-bold text-octavia-500 font-mono">—</span></div>
+                    <div class="glass-card p-5 rounded-2xl"><span class="text-xs text-gray-400 block mb-1">Connected Guilds</span><span id="stat-guilds" class="text-2xl font-bold text-white font-mono">—</span></div>
+                </div>
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="card-title mb-4">Telegram Session</div>
+                    <div id="tg-session-status" class="flex items-center gap-2 text-sm text-gray-400">
+                        <div class="spinner !w-4 !h-4"></div> Checking...
+                    </div>
+                </div>
+                <button onclick="loadBotStatus()" class="text-xs text-gray-500 hover:text-white transition-colors flex items-center gap-1.5 mx-auto">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Refresh Status
+                </button>
+            </div>
+
+        </div><!-- /settings-container -->
+    </section>
+</main>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-octavia-card border border-octavia-500 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-white text-sm font-medium">
+    <svg class="w-5 h-5 text-octavia-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toast-msg">Done!</span>
+</div>
+
+<script>
+// ── STATE ──
+let currentUser = null, currentGuildId = null, currentGuildMetadata = null;
+let currentGuilds = [], currentSettings = { domains:[], blacklist:[], defaultRoles:[], domainRoles:{} };
+
+// ── INIT ──
+async function init() {
+    try {
+        const res = await fetch('/api/user');
+        if (!res.ok) { showState('login'); return; }
+        const data = await res.json();
+        currentUser = data.user;
+        currentGuilds = data.guilds;
+        renderUserNav(data.user);
+        renderServerDropdown(data.guilds);
+        showState('app');
+        const first = data.guilds.find(g => g.botPresent);
+        if (first) selectGuild(first.id);
+    } catch { showState('login'); }
+}
+
+function showState(state) {
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('login-hero').classList.toggle('hidden', state !== 'login');
+    if (state === 'app') {
+        document.getElementById('sidebar').classList.remove('hidden');
+        document.getElementById('sidebar').classList.add('flex');
+        document.getElementById('server-picker-wrap').classList.remove('hidden');
+    }
+}
+
+// ── USER NAV ──
+function renderUserNav(user) {
+    document.getElementById('nav-user-container').innerHTML = `
+        <div class="flex items-center gap-2 bg-octavia-dark/60 border border-octavia-border px-3 py-1.5 rounded-full">
+            <img src="${user.avatar}" class="w-6 h-6 rounded-full border border-white/20">
+            <span class="text-sm font-semibold text-white">${user.globalName}</span>
+            <a href="/auth/logout" class="text-xs text-gray-400 hover:text-red-400 ml-1 font-medium transition-colors">Logout</a>
+        </div>`;
+}
+
+// ── SERVER DROPDOWN ──
+function renderServerDropdown(guilds) {
+    const list = document.getElementById('server-dropdown-list');
+    list.innerHTML = '';
+    guilds.forEach(g => {
+        const icon = g.icon || 'https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png';
+        const el = document.createElement('div');
+        el.className = `server-option${!g.botPresent ? ' opacity-40' : ''}`;
+        el.id = `dd-guild-${g.id}`;
+        el.innerHTML = `
+            <img src="${icon}" class="w-8 h-8 rounded-lg object-cover bg-octavia-border shrink-0">
+            <div class="overflow-hidden flex-1">
+                <div class="text-sm font-semibold text-white truncate">${g.name}</div>
+                <div class="text-[10px] text-gray-400 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full inline-block ${g.botPresent ? 'bg-green-400':'bg-gray-500'}"></span>
+                    ${g.botPresent ? 'Active' : 'Bot Not Invited'}
+                </div>
+            </div>`;
+        if (g.botPresent) el.onclick = () => { selectGuild(g.id); closeServerDropdown(); };
+        list.appendChild(el);
+    });
+}
+function toggleServerDropdown() { document.getElementById('server-dropdown-panel').classList.toggle('open'); }
+function closeServerDropdown() { document.getElementById('server-dropdown-panel').classList.remove('open'); }
+document.addEventListener('click', e => { if (!document.getElementById('server-picker-wrap')?.contains(e.target)) closeServerDropdown(); });
+
+function updatePickerDisplay(g) {
+    document.getElementById('picker-guild-icon').src = g.icon || 'https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png';
+    document.getElementById('picker-guild-name').textContent = g.name;
+    document.querySelectorAll('.server-option').forEach(el => el.classList.remove('active-guild'));
+    document.getElementById(`dd-guild-${g.id}`)?.classList.add('active-guild');
+}
+
+// ── SELECT GUILD ──
+async function selectGuild(guildId) {
+    currentGuildId = guildId;
+    const g = currentGuilds.find(x => x.id === guildId);
+    if (g) updatePickerDisplay(g);
+    const sc = document.getElementById('settings-container');
+    sc.classList.remove('hidden');
+    const ca = document.getElementById('content-area');
+    ca.classList.remove('items-center','justify-center');
+    ca.classList.add('items-start');
+    await loadGuildSettings(guildId);
+}
+
+// ── LOAD SETTINGS ──
+async function loadGuildSettings(guildId) {
+    if (!guildId) return;
+    document.getElementById('active-guild-name').textContent = 'Loading...';
+    document.getElementById('active-guild-id').textContent = '—';
+    const metaRes = await fetch(`/api/guilds/${guildId}/metadata`);
+    if (!metaRes.ok) { alert('Could not load server data.'); return; }
+    currentGuildMetadata = await metaRes.json();
+    document.getElementById('active-guild-name').textContent = currentGuildMetadata.name;
+    document.getElementById('active-guild-id').textContent = 'ID: '+currentGuildMetadata.id;
+    document.getElementById('active-guild-icon').src = currentGuildMetadata.icon || 'https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavia.png';
+    populatePickers(currentGuildMetadata);
+    const setRes = await fetch(`/api/guilds/${guildId}/settings`);
+    currentSettings = await setRes.json();
+    applySettingsToUI();
+}
+
+function applySettingsToUI() {
+    const s = currentSettings;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+    set('setting-language', s.language || 'english');
+    document.getElementById('setting-autoVerify').checked = !!s.autoVerify;
+    document.getElementById('setting-autoAddUnverified').checked = !!s.autoAddUnverified;
+    set('setting-verifyMessage', s.verifyMessage || '');
+    set('setting-otpExpiry', s.otpExpiry ?? 10);
+    set('setting-maxOtpAttempts', s.maxOtpAttempts ?? 3);
+    set('setting-unverifiedRoleName', s.unverifiedRoleName || '');
+    set('setting-channelID', s.channelID || '');
+    set('setting-messageID', s.messageID || '');
+    set('setting-logChannel', s.logChannel || '');
+    set('setting-errorNotifyType', s.errorNotifyType || 'owner');
+    set('setting-errorNotifyTarget', s.errorNotifyTarget || '');
+    set('setting-modPingRoleId', s.modPingRoleId || '');
+    set('setting-eventForumId', s.eventForumId || '');
+    set('setting-spamReportChannelId', s.spamReportChannelId || '');
+    set('setting-chatbotModel', s.chatbotModel || 'gemini-2.5-flash');
+    set('setting-scraperModel', s.scraperModel || 'gemini-2.5-flash');
+    const drSet = new Set(s.defaultRoles || []);
+    document.querySelectorAll('#defaultRoles-picker input[type=checkbox]').forEach(cb => { cb.checked = drSet.has(cb.value); });
+    renderDomains(); renderBlacklist(); renderDomainRoles(); loadTgBlacklist();
+}
+
+// ── POPULATE PICKERS ──
+function populatePickers(meta) {
+    const unv = document.getElementById('setting-unverifiedRoleName');
+    const mod = document.getElementById('setting-modPingRoleId');
+    const drSel = document.getElementById('domainRole-role-select');
+    const drPicker = document.getElementById('defaultRoles-picker');
+    unv.innerHTML = '<option value="">None (Disabled)</option>';
+    mod.innerHTML = '<option value="">None (No Mod Pings)</option>';
+    drSel.innerHTML = '<option value="">Select Role...</option>';
+    drPicker.innerHTML = '';
+    meta.roles.forEach(r => {
+        if (r.nameEqualsEveryone || r.managed) return;
+        const opt = `<option value="${r.id}">${r.name}</option>`;
+        unv.innerHTML += opt; mod.innerHTML += opt; drSel.innerHTML += opt;
+        const col = (r.color && r.color !== '#000000') ? r.color : '#6b7280';
+        const lbl = document.createElement('label');
+        lbl.className = 'flex items-center gap-2 text-sm text-gray-300 hover:text-white cursor-pointer py-1';
+        lbl.innerHTML = `<input type="checkbox" value="${r.id}" class="w-4 h-4 rounded accent-octavia-500">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background:${col}"></span><span>${r.name}</span>`;
+        drPicker.appendChild(lbl);
+    });
+    const ch = document.getElementById('setting-channelID');
+    const log = document.getElementById('setting-logChannel');
+    const forum = document.getElementById('setting-eventForumId');
+    const spam = document.getElementById('setting-spamReportChannelId');
+    ch.innerHTML = '<option value="">None</option>';
+    log.innerHTML = '<option value="">Disabled</option>';
+    forum.innerHTML = '<option value="">None (Publisher Disabled)</option>';
+    spam.innerHTML = '<option value="">None (No Spam Alerts)</option>';
+    meta.channels.forEach(c => {
+        const opt = `<option value="${c.id}"># ${c.name}</option>`;
+        if (c.type === 0 || c.type === 5) { ch.innerHTML += opt; log.innerHTML += opt; spam.innerHTML += opt; }
+        if (c.type === 15 || c.type === 0) forum.innerHTML += opt;
+    });
+}
+
+// ── TAB SWITCHING ──
+function switchTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-'+name)?.classList.add('active');
+    document.getElementById('nav-'+name)?.classList.add('active');
+    if (name === 'events') loadTgBlacklist();
+    if (name === 'status') loadBotStatus();
+}
+
+// ── SAVE SETTINGS ──
+async function saveSettings() {
+    if (!currentGuildId) return;
+    const btn = document.getElementById('save-btn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner !w-3 !h-3"></div>';
+    const checkedRoles = Array.from(document.querySelectorAll('#defaultRoles-picker input:checked')).map(cb => cb.value);
+    const payload = {
+        ...currentSettings,
+        language: document.getElementById('setting-language').value,
+        verifyMessage: document.getElementById('setting-verifyMessage').value,
+        autoVerify: document.getElementById('setting-autoVerify').checked,
+        autoAddUnverified: document.getElementById('setting-autoAddUnverified').checked,
+        otpExpiry: parseInt(document.getElementById('setting-otpExpiry').value) || 10,
+        maxOtpAttempts: parseInt(document.getElementById('setting-maxOtpAttempts').value) || 3,
+        unverifiedRoleName: document.getElementById('setting-unverifiedRoleName').value,
+        defaultRoles: checkedRoles,
+        modPingRoleId: document.getElementById('setting-modPingRoleId').value,
+        channelID: document.getElementById('setting-channelID').value,
+        messageID: document.getElementById('setting-messageID').value,
+        logChannel: document.getElementById('setting-logChannel').value,
+        errorNotifyType: document.getElementById('setting-errorNotifyType').value,
+        errorNotifyTarget: document.getElementById('setting-errorNotifyTarget').value,
+        eventForumId: document.getElementById('setting-eventForumId').value,
+        spamReportChannelId: document.getElementById('setting-spamReportChannelId').value,
+        chatbotModel: document.getElementById('setting-chatbotModel').value,
+        scraperModel: document.getElementById('setting-scraperModel').value,
+    };
+    try {
+        const res = await fetch(`/api/guilds/${currentGuildId}/settings`, {
+            method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        res.ok ? showToast('Settings saved!') : alert('Failed to save settings.');
+    } catch { alert('Network error.'); }
+    btn.disabled = false; btn.innerHTML = orig;
+}
+
+// ── DOMAIN TAGS ──
+function renderDomains() {
+    const el = document.getElementById('domains-list'); el.innerHTML = '';
+    const arr = currentSettings.domains || [];
+    if (!arr.length) { el.innerHTML = '<span class="text-xs text-gray-500 italic p-1">No domains added yet.</span>'; return; }
+    arr.forEach((d,i) => {
+        const t = document.createElement('span'); t.className = 'tag-pill';
+        t.innerHTML = `<span>${d}</span><button onclick="removeDomain(${i})" class="text-gray-400 hover:text-red-400 font-bold ml-1 leading-none">×</button>`;
+        el.appendChild(t);
+    });
+}
+function addDomainTag() {
+    const inp = document.getElementById('domain-input'), val = inp.value.trim().toLowerCase();
+    if (val && !(currentSettings.domains||[]).includes(val)) { (currentSettings.domains=currentSettings.domains||[]).push(val); renderDomains(); inp.value=''; }
+}
+function removeDomain(i) { currentSettings.domains.splice(i,1); renderDomains(); }
+document.getElementById('domain-input')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();addDomainTag();} });
+
+// ── BLACKLIST TAGS ──
+function renderBlacklist() {
+    const el = document.getElementById('blacklist-list'); el.innerHTML = '';
+    const arr = currentSettings.blacklist || [];
+    if (!arr.length) { el.innerHTML = '<span class="text-xs text-gray-500 italic p-1">No blacklisted patterns.</span>'; return; }
+    arr.forEach((b,i) => {
+        const t = document.createElement('span'); t.className = 'tag-pill !border-red-500/40 !bg-red-500/10 !text-red-300';
+        t.innerHTML = `<span>${b}</span><button onclick="removeBlacklist(${i})" class="text-red-400 hover:text-white font-bold ml-1 leading-none">×</button>`;
+        el.appendChild(t);
+    });
+}
+function addBlacklistTag() {
+    const inp = document.getElementById('blacklist-input'), val = inp.value.trim().toLowerCase();
+    if (val && !(currentSettings.blacklist||[]).includes(val)) { (currentSettings.blacklist=currentSettings.blacklist||[]).push(val); renderBlacklist(); inp.value=''; }
+}
+function removeBlacklist(i) { currentSettings.blacklist.splice(i,1); renderBlacklist(); }
+document.getElementById('blacklist-input')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();addBlacklistTag();} });
+
+// ── DOMAIN ROLE MAPPINGS ──
+function renderDomainRoles() {
+    const el = document.getElementById('domainRoles-list'); if (!el) return; el.innerHTML = '';
+    const dr = currentSettings.domainRoles || {};
+    const keys = Object.keys(dr);
+    if (!keys.length) { el.innerHTML = '<span class="text-xs text-gray-500 italic col-span-2">No mappings configured.</span>'; return; }
+    keys.forEach(domain => {
+        const rids = Array.isArray(dr[domain]) ? dr[domain] : [dr[domain]];
+        rids.forEach(rid => {
+            const r = currentGuildMetadata?.roles?.find(x=>x.id===rid);
+            const col = (r?.color && r.color!=='#000000') ? r.color : '#6b7280';
+            const card = document.createElement('div');
+            card.className = 'flex items-center justify-between p-3 bg-octavia-dark/80 rounded-xl border border-octavia-border/60';
+            card.innerHTML = `<div class="flex items-center gap-2 overflow-hidden min-w-0">
+                <span class="font-mono text-xs text-octavia-500 font-bold shrink-0">${domain}</span>
+                <span class="text-gray-500 text-xs">→</span>
+                <span class="w-2 h-2 rounded-full shrink-0" style="background:${col}"></span>
+                <span class="text-xs text-white truncate">${r?.name||'ID:'+rid}</span>
+            </div><button onclick="removeDomainRoleMapping('${domain.replace(/'/g,"\\'")}','${rid}')" class="text-gray-400 hover:text-red-400 font-bold ml-2 px-1 shrink-0">×</button>`;
+            el.appendChild(card);
+        });
+    });
+}
+function addDomainRoleMapping() {
+    const dom = document.getElementById('domainRole-input').value.trim().toLowerCase();
+    const role = document.getElementById('domainRole-role-select').value;
+    if (!dom||!role) { alert('Enter a domain and select a role.'); return; }
+    if (!currentSettings.domainRoles) currentSettings.domainRoles={};
+    if (!Array.isArray(currentSettings.domainRoles[dom])) currentSettings.domainRoles[dom]=[];
+    if (!currentSettings.domainRoles[dom].includes(role)) currentSettings.domainRoles[dom].push(role);
+    document.getElementById('domainRole-input').value=''; document.getElementById('domainRole-role-select').value='';
+    renderDomainRoles();
+}
+function removeDomainRoleMapping(domain, rid) {
+    if (!currentSettings.domainRoles?.[domain]) return;
+    currentSettings.domainRoles[domain] = currentSettings.domainRoles[domain].filter(r=>r!==rid);
+    if (!currentSettings.domainRoles[domain].length) delete currentSettings.domainRoles[domain];
+    renderDomainRoles();
+}
+
+// ── TELEGRAM BLACKLIST ──
+async function loadTgBlacklist() {
+    const el = document.getElementById('tgblacklist-list'); if (!el) return;
+    try {
+        const res = await fetch('/api/telegram/blacklist');
+        const data = await res.json();
+        el.innerHTML = '';
+        if (res.ok && data.blacklist?.length) {
+            data.blacklist.forEach(kw => {
+                const t = document.createElement('span'); t.className = 'tag-pill !border-red-500/40 !bg-red-500/10 !text-red-300';
+                const safe = kw.replace(/'/g,"\\'");
+                t.innerHTML = `<span>${kw}</span><button onclick="removeTgBlacklistTag('${safe}')" class="text-red-400 hover:text-white font-bold ml-1 leading-none">×</button>`;
+                el.appendChild(t);
+            });
+        } else { el.innerHTML = '<span class="text-xs text-gray-500 italic">No keywords blocked.</span>'; }
+    } catch {}
+}
+async function addTgBlacklistTag() {
+    const inp = document.getElementById('tgblacklist-input'), keyword = inp.value.trim();
+    if (!keyword) return;
+    const res = await fetch('/api/telegram/blacklist', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword})});
+    if (res.ok) { inp.value=''; loadTgBlacklist(); }
+}
+async function removeTgBlacklistTag(keyword) {
+    const res = await fetch('/api/telegram/blacklist', {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword})});
+    if (res.ok) loadTgBlacklist();
+}
+document.getElementById('tgblacklist-input')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();addTgBlacklistTag();} });
+
+// ── POST VERIFICATION BUTTON ──
+async function sendVerificationButton() {
+    const channelId = document.getElementById('setting-channelID').value;
+    if (!channelId) { alert('Select a Verification Channel first.'); return; }
+    const res = await fetch(`/api/guilds/${currentGuildId}/button`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+            channelId,
+            buttonText: document.getElementById('button-custom-text').value.trim()||'Verify',
+            color: document.getElementById('button-custom-color').value.trim(),
+            title: document.getElementById('button-custom-title').value.trim(),
+            message: document.getElementById('button-custom-msg').value.trim()
+        })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+        if (data.messageId) document.getElementById('setting-messageID').value = data.messageId;
+        showToast('Verification button posted!');
+    } else { alert(`Failed: ${data.error||'Unknown error'}`); }
+}
+
+// ── SCRAPER TRIGGER ──
+async function triggerTelegramScraper() {
+    const btn = document.getElementById('scrape-btn'), orig = btn.innerHTML;
+    btn.disabled=true; btn.innerHTML='<div class="spinner !w-4 !h-4"></div> Running...';
+    try {
+        const res = await fetch('/api/telegram/scrape', {method:'POST'});
+        const data = await res.json();
+        res.ok ? showToast(data.message) : alert(`Failed: ${data.error||'Unknown'}`);
+    } catch { alert('Error triggering scraper.'); }
+    btn.disabled=false; btn.innerHTML=orig;
+}
+
+// ── MANUAL VERIFY ──
+async function manualVerifyUser() {
+    const userId = document.getElementById('manual-user-id').value.trim();
+    const email = document.getElementById('manual-email').value.trim();
+    if (!userId||!email) { alert('Provide both a Discord User ID and Email.'); return; }
+    const res = await fetch(`/api/guilds/${currentGuildId}/manualverify`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({userId,email})
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+        showToast(data.message);
+        document.getElementById('manual-user-id').value='';
+        document.getElementById('manual-email').value='';
+    } else { alert(`Failed: ${data.error||'Unknown'}`); }
+}
+
+// ── USER LOOKUP ──
+async function lookupUser() {
+    const userId = document.getElementById('lookup-user-id').value.trim();
+    if (!userId) return;
+    document.getElementById('lookup-result').classList.add('hidden');
+    const res = await fetch(`/api/guilds/${currentGuildId}/users/${userId}`);
+    const data = await res.json();
+    if (res.ok && data) {
+        document.getElementById('lookup-result-content').innerHTML = `<strong>Status:</strong> Verified<br><strong>Email Hash:</strong> ${data.email||'N/A'}`;
+        document.getElementById('lookup-result').classList.remove('hidden');
+    } else { alert(data.error||'User not found in verified database.'); }
+}
+async function deleteUserData() {
+    const userId = document.getElementById('lookup-user-id').value.trim();
+    if (!userId||!confirm(`Unverify and delete data for user ${userId}?`)) return;
+    const res = await fetch(`/api/guilds/${currentGuildId}/users/${userId}`, {method:'DELETE'});
+    const data = await res.json();
+    if (res.ok && data.success) {
+        showToast(data.message);
+        document.getElementById('lookup-result').classList.add('hidden');
+        document.getElementById('lookup-user-id').value='';
+    } else { alert('Failed to delete user data.'); }
+}
+
+// ── EXPORT CSV ──
+function exportVerifiedMembers() {
+    if (!currentGuildId) return;
+    window.location.href = `/api/guilds/${currentGuildId}/export`;
+}
+
+// ── INVITE LINK ──
+async function generateInviteLink() {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    if (data.clientId) {
+        const url = `https://discord.com/api/oauth2/authorize?client_id=${data.clientId}&permissions=8&scope=bot%20applications.commands`;
+        const a = document.getElementById('invite-link-url');
+        a.href = url; a.textContent = url;
+        document.getElementById('invite-link-result').classList.remove('hidden');
+    } else { alert('Client ID not configured.'); }
+}
+
+// ── BOT STATUS ──
+async function loadBotStatus() {
+    try {
+        const res = await fetch('/api/bot/status');
+        const data = await res.json();
+        if (res.ok && data.status) {
+            const s = data.status;
+            const h = Math.floor(s.uptimeMs/3600000), m = Math.floor((s.uptimeMs%3600000)/60000);
+            document.getElementById('stat-uptime').textContent = `${h}h ${m}m`;
+            document.getElementById('stat-memory').textContent = `${s.memoryMB}MB / ${s.shards}s`;
+            document.getElementById('stat-guilds').textContent = s.guildsCount;
+        }
+        const tg = document.getElementById('tg-session-status');
+        const active = data.status?.telegramSessionActive;
+        tg.innerHTML = active
+            ? '<span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Telegram session active'
+            : '<span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span> Session not configured or inactive';
+    } catch {
+        document.getElementById('stat-uptime').textContent = 'N/A';
+    }
+}
+
+// ── TOAST ──
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg;
+    t.classList.remove('translate-y-20','opacity-0');
+    setTimeout(() => t.classList.add('translate-y-20','opacity-0'), 3500);
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

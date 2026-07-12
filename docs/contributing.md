@@ -1,6 +1,6 @@
 ---
 title: Contributing Guide
-description: Guidelines and instructions for contributing code, bug reports, and documentation to UTMJBC Bot.
+description: Guidelines and instructions for contributing code, bug reports, and documentation to Octavia.
 ---
 
 # Contributing Guide
