@@ -7,7 +7,9 @@ const fsPromises = require("fs").promises;
 class ServerStatsAPI {
     constructor(bot, startServer = true) {
         this.app = express();
-        this.port = process.env.PORT || 8181;
+        // Use SERVER_STATS_PORT or 8181. Do NOT use process.env.PORT because AlwaysData assigns
+        // process.env.PORT to the primary web application (DashboardServer serving index.html).
+        this.port = process.env.SERVER_STATS_PORT || process.env.PORT_STATS || 8181;
         this.bot = bot;
         this.started = false;
         this.historyFileName = "config/ServerStatsHistory.log";
