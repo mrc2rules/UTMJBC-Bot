@@ -33,11 +33,19 @@ class DashboardServer {
         }, 3600000);
     }
 
-    getConfig() {
+    getConfig(req = null) {
         let clientId = process.env.DISCORD_CLIENT_ID || process.env.CLIENT_ID || process.env.clientId;
         let clientSecret = process.env.DISCORD_CLIENT_SECRET || process.env.CLIENT_SECRET || process.env.clientSecret;
         let redirectUri = process.env.DASHBOARD_REDIRECT_URI || process.env.REDIRECT_URI;
-        let baseUrl = process.env.DASHBOARD_URL || process.env.BASE_URL || `http://localhost:${this.port}`;
+        let baseUrl = process.env.DASHBOARD_URL || process.env.BASE_URL;
+
+        if (!baseUrl && req && req.headers && req.headers.host) {
+            const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+            baseUrl = `${proto}://${req.headers.host}`;
+        }
+        if (!baseUrl) {
+            baseUrl = `http://localhost:${this.port}`;
+        }
 
         try {
             const fs = require('fs');
@@ -207,7 +215,7 @@ class DashboardServer {
 
         // Status / Config Check Endpoint
         this.app.get('/api/status', async (req, res) => {
-            const cfg = this.getConfig();
+            const cfg = this.getConfig(req);
             const botGuilds = await this.getBotGuildIds();
             res.json({
                 ready: true,
@@ -220,7 +228,7 @@ class DashboardServer {
 
         // OAuth2 Authorization Redirect
         this.app.get('/auth/discord', (req, res) => {
-            const cfg = this.getConfig();
+            const cfg = this.getConfig(req);
             if (!cfg.clientId || !cfg.clientSecret) {
                 return res.status(500).send(`
                     <div style="font-family: sans-serif; background: #0f1117; color: #fff; padding: 40px; max-width: 600px; margin: 40px auto; border-radius: 12px; border: 1px solid #ff4d6d;">
@@ -245,7 +253,7 @@ CLIENT_SECRET=your_client_secret_here (or DISCORD_CLIENT_SECRET)</pre>
                 return res.redirect('/?error=no_code');
             }
 
-            const cfg = this.getConfig();
+            const cfg = this.getConfig(req);
             try {
                 // Exchange code for token
                 const params = new URLSearchParams({
