@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: production
-      url: https://services-jbcemail.alwaysdata.net
+      url: https://services-octavia.alwaysdata.net
 
     steps:
       - name: Checkout repository code
@@ -32,9 +32,9 @@ jobs:
           script: |
             set -euo pipefail
 
-            APP_DIR="/home/jbcemail/EmailVerify"
-            BOT_PAT="node /home/jbcemail/EmailVerify/src/EmailBot.js"
-            SHARD_PAT="node /home/jbcemail/EmailVerify/src/sharder.js"
+            APP_DIR="/home/octavia/EmailVerify"
+            BOT_PAT="node /home/octavia/EmailVerify/src/EmailBot.js"
+            SHARD_PAT="node /home/octavia/EmailVerify/src/sharder.js"
 
             cd "$APP_DIR"
             git fetch origin main

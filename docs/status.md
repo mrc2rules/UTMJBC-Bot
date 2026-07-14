@@ -62,7 +62,7 @@ image: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavi
     ---
 
     <span id="server-indicator" class="status-indicator checking"></span> <span id="server-status" style="font-weight: 500;">Checking...</span>
-    <span class="status-url">https://jbcemail.alwaysdata.net</span>
+    <span class="status-url">https://octavia.alwaysdata.net</span>
 
 -   :material-robot: **Discord Bot**
 
@@ -86,7 +86,7 @@ image: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavi
 
 | Service | Description | Endpoint |
 |---------|-------------|----------|
-| **Server** | Primary backend API serving statistics and verification queries | `jbcemail.alwaysdata.net` |
+| **Server** | Primary backend API serving statistics and verification queries | `octavia.alwaysdata.net` |
 | **Discord Bot** | Sharded Discord bot process handling server events and commands | `Gateway Shard #0` |
 | **GMail servers** | Google SMTP server cluster processing OTP verification emails | `smtp.gmail.com` |
 
@@ -113,7 +113,7 @@ function updateLastChecked() {
 
 async function checkServerStatus() {
   try {
-    const response = await fetch('https://jbcemail.alwaysdata.net/stats/current', {
+    const response = await fetch('https://octavia.alwaysdata.net/stats/current', {
       method: 'GET',
       mode: 'cors'
     });
@@ -152,7 +152,7 @@ async function checkGmailStatus() {
       const sentToday = latestStats.mailsSendToday || 0;
       if (gmailDetails) gmailDetails.textContent = 'Today: ' + sentToday + ' verification emails processed';
     } else {
-      await fetch('https://jbcemail.alwaysdata.net', {
+      await fetch('https://octavia.alwaysdata.net', {
         method: 'HEAD',
         mode: 'no-cors'
       });

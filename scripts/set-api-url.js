@@ -17,8 +17,8 @@ const files = [
     path.join(__dirname, '../docs/status.md')
 ];
 
-const DEFAULT_URL = 'https://jbcemail.alwaysdata.net';
-const DEFAULT_URL_HOST = 'jbcemail.alwaysdata.net';
+const DEFAULT_URL = 'https://octavia.alwaysdata.net';
+const DEFAULT_URL_HOST = 'octavia.alwaysdata.net';
 
 files.forEach(filePath => {
     if (!fs.existsSync(filePath)) {

@@ -182,7 +182,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: production
-      url: https://services-jbcemail.alwaysdata.net
+      url: https://services-octavia.alwaysdata.net
 
     steps:
       - name: Checkout repository code
@@ -198,9 +198,9 @@ jobs:
           script: |
             set -euo pipefail
 
-            APP_DIR="/home/jbcemail/EmailVerify"
-            BOT_PAT="node /home/jbcemail/EmailVerify/src/EmailBot.js"
-            SHARD_PAT="node /home/jbcemail/EmailVerify/src/sharder.js"
+            APP_DIR="/home/octavia/EmailVerify"
+            BOT_PAT="node /home/octavia/EmailVerify/src/EmailBot.js"
+            SHARD_PAT="node /home/octavia/EmailVerify/src/sharder.js"
 
             cd "$APP_DIR"
             git fetch origin main
@@ -1286,7 +1286,7 @@ const emailsToday = document.getElementById("emailsToday");
 const emailsAll = document.getElementById("emailsAll");
 
 function refreshData(){
-  fetch('https://services-jbcemail.alwaysdata.net/stats/current')
+  fetch('https://services-octavia.alwaysdata.net/stats/current')
     .then(response => response.json())
     .then(data => {
       serverCount.textContent = data.serverCount;
@@ -1800,7 +1800,7 @@ Allow: *
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const API_BASE = 'https://services-jbcemail.alwaysdata.net';
+const API_BASE = 'https://services-octavia.alwaysdata.net';
 
 const baseOptions = {
     responsive: true,
@@ -2140,7 +2140,7 @@ setInterval(fetchCurrentStats, 30000);
       UTMJBC API
     </h3>
     <div id="api-status" class="status-text">Checking...</div>
-    <div class="status-url">https://services-jbcemail.alwaysdata.net</div>
+    <div class="status-url">https://services-octavia.alwaysdata.net</div>
   </div>
 
   <div class="status-card">
@@ -2149,7 +2149,7 @@ setInterval(fetchCurrentStats, 30000);
       Mail Server
     </h3>
     <div id="mail-status" class="status-text">Checking...</div>
-    <div class="status-url">services-jbcemail.alwaysdata.net</div>
+    <div class="status-url">services-octavia.alwaysdata.net</div>
   </div>
 
   <div class="status-card">
@@ -2168,8 +2168,8 @@ setInterval(fetchCurrentStats, 30000);
 
 | Service | Description | Endpoint |
 |---------|-------------|----------|
-| UTMJBC API | Provides statistics and event scraper functionality | `services-jbcemail.alwaysdata.net` |
-| Mail Server | SMTP server for sending verification emails | `services-jbcemail.alwaysdata.net` |
+| UTMJBC API | Provides statistics and event scraper functionality | `services-octavia.alwaysdata.net` |
+| Mail Server | SMTP server for sending verification emails | `services-octavia.alwaysdata.net` |
 | Email Delivery | Monitors email send/verification ratio | - |
 
 ## Need Help?
@@ -2195,7 +2195,7 @@ function updateLastChecked() {
 
 async function checkApiStatus() {
   try {
-    const response = await fetch('https://services-jbcemail.alwaysdata.net/stats/current', {
+    const response = await fetch('https://services-octavia.alwaysdata.net/stats/current', {
       method: 'GET',
       mode: 'cors'
     });
@@ -2219,7 +2219,7 @@ async function checkApiStatus() {
 async function checkMailStatus() {
   try {
     // Check service via HTTPS
-    const response = await fetch('https://services-jbcemail.alwaysdata.net', {
+    const response = await fetch('https://services-octavia.alwaysdata.net', {
       method: 'HEAD',
       mode: 'no-cors'
     });
@@ -3533,7 +3533,7 @@ class ServerStatsAPI {
         this.app.use(cors({
             origin: [
                 "https://jbcbot.rahbab.com",
-                "https://services-jbcemail.alwaysdata.net",
+                "https://services-octavia.alwaysdata.net",
                 "http://localhost:8000"
             ]
         }));

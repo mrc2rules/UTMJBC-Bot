@@ -166,7 +166,7 @@ image: https://raw.githubusercontent.com/mrc2rules/UTMJBC-Bot/main/images/octavi
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const API_BASE = 'https://jbcemail.alwaysdata.net';
+const API_BASE = 'https://octavia.alwaysdata.net';
 
 const baseOptions = {
     responsive: true,

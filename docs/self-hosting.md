@@ -159,7 +159,7 @@ If you host your own MkDocs documentation site and want the live graphs on `inde
 
 1.  **Expose Port 8181:** Ensure your hosting provider or firewall opens port `8181` to public traffic, or set up a reverse proxy (Nginx/Cloudflare) mapping an SSL domain (e.g., `https://api.yourdomain.com`) to port `8181`.
 2.  **Configure CORS:** `src/api/ServerStatsAPI.js` uses `origin: "*"` by default to allow cross-origin analytics requests from any frontend documentation site.
-3.  **Update Frontend Script:** In `docs/index.md` and `docs/statistics.md`, change the JavaScript fetch constant `API_BASE` (or endpoint URL) from `https://jbcemail.alwaysdata.net` to your server's API URL:
+3.  **Update Frontend Script:** In `docs/index.md` and `docs/statistics.md`, change the JavaScript fetch constant `API_BASE` (or endpoint URL) from `https://octavia.alwaysdata.net` to your server's API URL:
     ```js title="docs/statistics.md"
     const API_BASE = 'https://api.yourdomain.com'; // or http://localhost:8181
     ```

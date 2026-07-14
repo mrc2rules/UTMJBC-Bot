@@ -110,7 +110,7 @@ const ids = ['serverCount','verifiedToday','verifiedAll','emailsToday','emailsAl
 const keys = ['serverCount','usersVerifiedToday','usersVerifiedAll','mailsSendToday','mailsSendAll'];
 
 function refreshData() {
-  fetch('https://jbcemail.alwaysdata.net/stats/current')
+  fetch('https://octavia.alwaysdata.net/stats/current')
     .then(r => r.json())
     .then(data => {
       ids.forEach((id, i) => {
